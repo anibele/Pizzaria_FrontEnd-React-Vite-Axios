@@ -1,0 +1,43 @@
+.lista-cardapio-container {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.secao-cardapio {
+    animation: fadeInCardapio 0.5s ease-in-out;
+}
+
+.secao-header {
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.secao-titulo {
+    margin: 0;
+    font-size: 1.6em;
+    color: #333;
+    font-family: sans-serif;
+    font-weight: bold;
+}
+
+.produtos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+/* Animação suave ao renderizar as categorias */
+@keyframes fadeInCardapio {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

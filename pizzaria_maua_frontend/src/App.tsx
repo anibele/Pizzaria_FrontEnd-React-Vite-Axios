@@ -9,10 +9,10 @@ export default function App() {
     const { user, authenticated } = useContext(AuthContext);
 
     return (
-        // Adiciona padding superior dinâmico se logado para não cobrir o conteúdo do cardápio/dashboard
-        <div className="app-container" style={{ paddingTop: authenticated ? "250px" : "0px" }}>
+        /* Removido o padding-top de 250px pois a NavBar relative já ocupa seu espaço natural */
+        <div className="app-container">
 
-            {/* 1. Só exibe a NavBar fixa se o usuário estiver autenticado */}
+            {/* 1. Só exibe a NavBar se o usuário estiver autenticado */}
             {authenticated && <NavBar />}
 
             {/* 2. Menu secundário de navegação baseado na ROLE do usuário */}

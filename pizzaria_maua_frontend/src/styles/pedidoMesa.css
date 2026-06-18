@@ -1,0 +1,121 @@
+.sticky-pedido-wrapper {
+    position: sticky;
+    top: 20px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.pedido-titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-family: sans-serif;
+    font-size: 1.25rem;
+    color: #333;
+    justify-content: center;
+}
+
+.pedido-subtitulo {
+    color: #777;
+    font-size: 0.85rem;
+    margin-top: 4px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.carrinho-vazio {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 20px 0;
+    margin: 0;
+}
+
+.lista-carrinho {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.item-carrinho {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.item-carrinho-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.item-carrinho-nome {
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.item-carrinho-preco {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Controles de quantidade melhorados para acessibilidade e toque */
+.carrinho-controles {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-qty {
+    background: #fdfdfd;
+    border: 1.5px solid #a0a0a0; /* Borda bem visível */
+    border-radius: 6px;
+    width: 32px;  /* Maior para facilitar o clique no tablet */
+    height: 32px; /* Maior para facilitar o clique no tablet */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #222; /* Ícones escuros e nítidos */
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-qty:hover {
+    background: #e0e0e0;
+    border-color: #555;
+}
+
+.btn-qty svg {
+    stroke-width: 2.5px; /* Deixa as linhas do + e - mais gordinhas e visíveis */
+}
+
+.total-box {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: 1.1rem;
+    padding-top: 16px;
+    padding-bottom: 6px;
+    color: #222;
+}
+
+/* Nova linha discreta do total geral acumulado */
+.total-conta-futura-box {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #666;
+    padding-bottom: 16px;
+    margin-bottom: 12px;
+    border-bottom: 1px dashed #e0e0e0;
+}
+
+.total-conta-futura-box span:last-child {
+    font-weight: 600;
+    color: #333;
+}

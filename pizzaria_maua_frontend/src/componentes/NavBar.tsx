@@ -24,9 +24,7 @@ export default function NavBar() {
 
     return (
         <div style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
+            position: "relative",
             width: "100%",
             height: "200px",
             backgroundImage: `url(${bannerImg})`,
