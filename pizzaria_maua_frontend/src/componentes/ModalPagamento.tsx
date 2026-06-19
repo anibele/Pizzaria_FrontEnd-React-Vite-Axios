@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
+import { X, QrCode, CreditCard, Banknote, CheckCircle2 } from "lucide-react";
+import "../styles/modalPagamento.css";
 
 interface ModalPagamentoProps {
     isOpen: boolean;
@@ -9,6 +11,24 @@ export default function ModalPagamento({ isOpen, onClose }: ModalPagamentoProps)
     const [passo, setPasso] = useState<1 | 2>(1);
     const [formaEscolhida, setFormaEscolhida] = useState<'PIX' | 'CARTAO' | 'DINHEIRO' | "">("");
 
+    // TIMER AUTOMÁTICO DE 10 SEGUNDOS PARA O PASSO 2
+    useEffect(() => {
+        if (!isOpen || passo !== 2) return;
+
+        const autoCloseTimer = setTimeout(() => {
+            if (formaEscolhida !== "") {
+                onClose(formaEscolhida);
+            } else {
+                onClose();
+            }
+            // Pequeno delay para resetar o passo após a animação de fade-out do modal
+            setTimeout(() => setPasso(1), 300);
+        }, 10000); // 10000ms = 10 segundos
+
+        // Limpa o temporizador caso o usuário clique no "X" manualmente antes do tempo
+        return () => clearTimeout(autoCloseTimer);
+    }, [passo, isOpen, formaEscolhida, onClose]);
+
     if (!isOpen) return null;
 
     const handleEscolherForma = (forma: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
@@ -16,7 +36,7 @@ export default function ModalPagamento({ isOpen, onClose }: ModalPagamentoProps)
         setPasso(2);
     };
 
-    const handleFechar = () => {
+    const handleFecharManualmente = () => {
         if (passo === 2 && formaEscolhida !== "") {
             onClose(formaEscolhida);
         } else {
@@ -26,53 +46,61 @@ export default function ModalPagamento({ isOpen, onClose }: ModalPagamentoProps)
     };
 
     return (
-        <div style={{
-            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.6)",
-            display: "flex", justifyContent: "center", alignItems: "center",
-            zIndex: 1000
-        }}>
-            <div style={{
-                backgroundColor: "#fff", padding: "30px", borderRadius: "8px",
-                width: "400px", textAlign: "center", position: "relative",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-            }}>
+        <div className="modal-overlay">
+            <div className="modal-container">
+
+                {/* --- AQUI ESTÁ A MUDANÇA CIRÚRGICA --- */}
+                {/* Botão de Fechar fixo no topo direito (Muda conforme o passo) */}
+                {passo === 1 ? (
+                    <button onClick={handleFecharManualmente} className="btn-modal-fechar" title="Fechar">
+                        <X size={22} />
+                    </button>
+                ) : (
+                    <div className="btn-timer-container">
+                        <button onClick={handleFecharManualmente} className="btn-modal-fechar-timer" title="Fechar">
+                            <X size={18} />
+                        </button>
+                        <svg className="svg-countdown" viewBox="0 0 34 34">
+                            <circle cx="17" cy="17" r="14" className="svg-countdown-bg" />
+                            <circle cx="17" cy="17" r="14" className="svg-countdown-progress" />
+                        </svg>
+                    </div>
+                )}
+                {/* ------------------------------------ */}
 
                 {passo === 1 ? (
                     <>
-                        <button onClick={handleFechar} style={btnFecharStyle}>X</button>
-                        <h2 style={{ marginTop: 0 }}>Como deseja pagar?</h2>
-                        <p style={{ color: "#666", marginBottom: "20px" }}>Selecione a forma de pagamento abaixo:</p>
+                        <h2 className="modal-titulo">Como deseja pagar?</h2>
+                        <p className="modal-subtitulo">Selecione a forma de pagamento abaixo:</p>
 
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                            {/* Mudado aqui para enviar exatamente as Strings aceitas pelo seu hook */}
-                            <button style={btnOpcaoStyle} onClick={() => handleEscolherForma("PIX")}>💠 PIX</button>
-                            <button style={btnOpcaoStyle} onClick={() => handleEscolherForma("CARTAO")}>💳 Cartão (Crédito/Débito)</button>
-                            <button style={btnOpcaoStyle} onClick={() => handleEscolherForma("DINHEIRO")}>💵 Dinheiro</button>
+                        <div className="opcoes-pagamento-container">
+                            <button className="btn-opcao-pagamento" onClick={() => handleEscolherForma("PIX")}>
+                                <QrCode size={20} /> Pix
+                            </button>
+                            <button className="btn-opcao-pagamento" onClick={() => handleEscolherForma("CARTAO")}>
+                                <CreditCard size={20} /> Cartão (Crédito/Débito)
+                            </button>
+                            <button className="btn-opcao-pagamento" onClick={() => handleEscolherForma("DINHEIRO")}>
+                                <Banknote size={20} /> Dinheiro
+                            </button>
                         </div>
                     </>
                 ) : (
-                    <>
-                        <button onClick={handleFechar} style={btnFecharStyle}>X</button>
-                        <h2 style={{ marginTop: 0, color: "#2e7d32" }}>Pronto!</h2>
-                        <p style={{ fontSize: "1.1em", lineHeight: "1.5", color: "#333" }}>
+                    <div className="sucesso-container">
+                        <div className="sucesso-icone-wrapper">
+                            <CheckCircle2 size={56} strokeWidth={2.5} />
+                        </div>
+                        <h2 className="modal-titulo" style={{ color: "#2e7d32" }}>Pronto!</h2>
+                        <p className="sucesso-texto">
                             Obrigado por desfrutar esse momento conosco.
+                        </p>
+                        <p className="sucesso-texto">
                             Aguarde o nosso funcionário na sua mesa para finalizar o pagamento.
                         </p>
-                    </>
+                        <span className="timer-aviso">Esta tela fechará automaticamente em instantes...</span>
+                    </div>
                 )}
             </div>
         </div>
     );
 }
-
-const btnFecharStyle: React.CSSProperties = {
-    position: "absolute", top: "10px", right: "15px", background: "transparent",
-    border: "none", fontSize: "1.5em", fontWeight: "bold", cursor: "pointer", color: "#999"
-};
-
-const btnOpcaoStyle: React.CSSProperties = {
-    padding: "15px", fontSize: "1.1em", backgroundColor: "#f5f5f5",
-    border: "1px solid #ddd", borderRadius: "6px", cursor: "pointer",
-    fontWeight: "bold", transition: "background 0.2s"
-};

@@ -39,15 +39,15 @@ export default function ComandaMesa({
                         <span className="item-consumido-info">
                             <strong>{item.quantidade}x</strong> {item.produtoNome}
                         </span>
-                        {/* Alterado de 'No Forno' para 'Em preparação' */}
+                        {/* Alterado para 'Em Preparo' para otimizar espaço em telas compactas */}
                         <span className={`status-badge ${item.status === "PRONTO" ? "pronto" : "preparacao"}`}>
-                            {item.status === "PRONTO" ? "Entregue" : "Em preparação"}
+                            {item.status === "PRONTO" ? "Entregue" : "Em Preparo"}
                         </span>
                     </li>
                 ))}
             </ul>
 
-            {/* Renomeado para Conta atual */}
+            {/* Conta atual */}
             <div className="conta-atual-box">
                 <span>Conta atual:</span>
                 <span>R$ {totalContaAtual.toFixed(2)}</span>
@@ -57,7 +57,7 @@ export default function ComandaMesa({
             {!todosItensProntos && (
                 <div className="comanda-aviso-preparo">
                     <Clock size={16} />
-                    <p>Pedidos em preparação. O pagamento será liberado assim que todos os itens forem entregues na mesa.</p>
+                    <p>Pedidos em preparo. O pagamento será liberado assim que todos os itens forem entregues na mesa.</p>
                 </div>
             )}
 

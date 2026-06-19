@@ -1,0 +1,186 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: #0f0f11; /* Evita um flash branco ao carregar a página */
+}
+
+.login-screen-container {
+    position: fixed;    /* Força a tela a ignorar containers pais e se fixar na janela */
+    top: 0;
+    left: 0;
+    width: 100%;        /* Uso de 100% em vez de 100vw mata a barra de rolagem horizontal */
+    height: 100%;       /* Uso de 100% em vez de 100vh evita quebras em navegadores mobile */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #0f0f11; /* Fundo escuro profundo */
+    font-family: sans-serif;
+    margin: 0;
+    padding: 20px;      /* Segurança para o card não colar nas bordas se a tela for muito pequena */
+    overflow: hidden;   /* Garante que nenhuma barra de rolagem surja do além */
+    z-index: 99999;     /* Garante que fique por cima de qualquer outro elemento do app */
+    box-sizing: border-box;
+}
+
+.login-card {
+    background-color: #16161a; /* Card ligeiramente mais claro */
+    padding: 40px;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid #232329;
+    animation: loginFadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
+.login-logo-wrapper {
+    background-color: rgba(229, 57, 53, 0.1);
+    color: #e53935; /* Vermelho pizza */
+    padding: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-titulo {
+    color: #ffffff;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    text-align: center;
+    letter-spacing: -0.5px;
+}
+
+.login-subtitulo {
+    color: #71717a;
+    font-size: 0.9rem;
+    margin: 4px 0 0 0;
+    text-align: center;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Grupo de Input com Ícone Interno */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+.input-label {
+    color: #a1a1aa;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    color: #52525b;
+    transition: color 0.2s;
+    pointer-events: none;
+}
+
+.login-input {
+    width: 100%;
+    padding: 14px 14px 14px 44px; /* Espaço na esquerda para o ícone */
+    background-color: #1d1d22;
+    border: 1.5px solid #2d2d34;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 0.95rem;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+}
+
+.login-input:focus {
+    border-color: #e53935;
+    background-color: #222229;
+    box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.15);
+}
+
+.login-input:focus + .input-icon {
+    color: #e53935;
+}
+
+/* Estado de Erro */
+.error-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    padding: 12px;
+    border-radius: 8px;
+    color: #ef4444;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+/* Botão Submit */
+.btn-login-submit {
+    width: 100%;
+    padding: 14px;
+    background-color: #e53935;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+}
+
+.btn-login-submit:hover:not(:disabled) {
+    background-color: #d32f2f;
+    transform: translateY(-1px);
+}
+
+.btn-login-submit:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-login-submit:disabled {
+    background-color: #3f3f46;
+    color: #a1a1aa;
+    cursor: not-allowed;
+}
+
+/* Animação de entrada */
+@keyframes loginFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

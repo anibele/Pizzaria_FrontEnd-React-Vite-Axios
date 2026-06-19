@@ -49,13 +49,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             setUser({ username, role });
 
-            if (role === 'MESA') navigate('/cardapio');
-            else if (role === 'COZINHA') navigate('/cozinha');
-            else if (role === 'GERENTE') navigate('/dashboard');
+            // --- CORREÇÃO DOS REDIRECIONAMENTOS ---
+            if (role === 'MESA') {
+                navigate('/cardapio');
+            } else if (role === 'COZINHA') {
+                navigate('/pedidos'); // Vai direto para a tela de pedidos
+            } else if (role === 'GERENTE') {
+                navigate('/');        // Vai direto para a tela de produtos
+            }
 
         } catch (error) {
             console.error("Erro ao fazer login:", error);
-            alert("Usuário ou senha inválidos!");
+            // Propaga o erro para o Login.tsx exibir a mensagem vermelha na interface!
+            throw error;
         }
     };
 

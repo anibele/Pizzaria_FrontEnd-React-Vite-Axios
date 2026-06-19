@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react"; // Adicionado useEffect
 import { AuthContext } from "../contexts/AuthContext";
 import { useProdutosAtivos } from "../hooks/useProdutosAtivos";
 import { usePedidoMesaAberto } from "../hooks/usePedidoMesaAberto";
@@ -9,6 +9,7 @@ import ModalPagamento from "../componentes/ModalPagamento";
 import ModalDetalhesProduto from "../componentes/ModalDetalhesProduto";
 import ListaCardapio from "../componentes/ListaCardapio";
 import PedidoMesa from "../componentes/PedidoMesa";
+import StandByPizzaria from "../pages/StandByPizzaria.tsx";
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
 
 import {
@@ -43,6 +44,7 @@ export default function CardapioCliente() {
     const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
     const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoDados | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const [isStandBy, setIsStandBy] = useState<boolean>(false); // Estado para controlar o Standby
 
     const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
     const { data: pedidoAtivo, isLoading: loadingPedido } = usePedidoMesaAberto(numeroMesa);
@@ -50,6 +52,35 @@ export default function CardapioCliente() {
     const { mutate: criarNovoPedido, isPending: criando } = usePedidoCriar();
     const { mutate: adicionarItensAoPedido, isPending: adicionando } = usePedidoAdicionarItens();
     const { mutate: finalizarPedido } = usePedidoFinalizar();
+
+    // MONITOR DE INATIVIDADE (5 Minutos) - CORRIGIDO PARA AMBIENTE BROWSER/REACT
+    useEffect(() => {
+        if (isStandBy) return; // Se já estiver em standby, não precisa escutar eventos
+
+        // CORREÇÃO AQUI: Mudamos de NodeJS.Timeout para ReturnType<typeof setTimeout>
+        let inactivityTimer: ReturnType<typeof setTimeout>;
+
+        const resetarCronometro = () => {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                setIsStandBy(true);
+            }, 1 * 60 * 1000); // 1 minuto (1 * 60 * 1000ms)
+        };
+
+        // Eventos de toque/clique no tablet que reiniciam a contagem do tempo
+        const eventosInteracao = ["mousemove", "mousedown", "touchstart", "click", "scroll"];
+
+        // Inicia a primeira contagem
+        resetarCronometro();
+
+        // Adiciona os listeners para capturar ações do cliente
+        eventosInteracao.forEach(evento => window.addEventListener(evento, resetarCronometro));
+
+        return () => {
+            clearTimeout(inactivityTimer);
+            eventosInteracao.forEach(evento => window.removeEventListener(evento, resetarCronometro));
+        };
+    }, [isStandBy]);
 
     const handleAdicionarAoCarrinho = (produto: ProdutoDados) => {
         setCarrinho((carrinhoAtual) => {
@@ -95,7 +126,6 @@ export default function CardapioCliente() {
                 itens: itensPayload
             }, {
                 onSuccess: () => {
-                    alert("Novos itens adicionados e enviados para a cozinha! 🍕");
                     limparCarrinho();
                 }
             });
@@ -111,7 +141,6 @@ export default function CardapioCliente() {
 
             criarNovoPedido(novoPedidoPayload, {
                 onSuccess: () => {
-                    alert("Pedido inicial aberto e enviado para a cozinha! 🎉");
                     limparCarrinho();
                 }
             });
@@ -129,11 +158,21 @@ export default function CardapioCliente() {
                 pedidoId: pedidoAtivo.id,
                 numeroMesa: numeroMesa,
                 formaPagamento: formaPagamentoSelecionada
+            }, {
+                // Ao finalizar o pagamento com sucesso, joga o tablet direto para a tela de StandBy
+                onSuccess: () => {
+                    setIsStandBy(true);
+                }
             });
         }
     };
 
     const produtosCardapio = produtos?.filter(p => p.ativo) || [];
+
+    // INTERCEPTADOR DE TELA: Se estiver ativo, renderiza apenas o Standby cobrindo tudo
+    if (isStandBy) {
+        return <StandByPizzaria onToque={() => setIsStandBy(false)} />;
+    }
 
     if (numeroMesa === 0 || loadingProdutos || loadingPedido) {
         return (
@@ -161,11 +200,9 @@ export default function CardapioCliente() {
             <div className="coluna-cardapio">
                 <div className="cardapio-header">
                     <h2 className="cardapio-title">
-                        <UtensilsCrossed color="#e53935" /> Cardápio Digital - Pizzaria Mauá
+                        <UtensilsCrossed color="#e53935" /> Cardápio Digital - Faça seus pedidos aqui!
                     </h2>
                 </div>
-
-                {/* O bloco da "Comanda Ativa" foi inteiramente removido daqui */}
 
                 <ListaCardapio
                     produtos={produtosCardapio}

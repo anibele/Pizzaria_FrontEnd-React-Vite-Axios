@@ -1,0 +1,205 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100000;
+    backdrop-filter: blur(4px); /* Suave desfoque no fundo */
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+.modal-container {
+    background-color: #fff;
+    padding: 32px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+    animation: modalScaleUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+}
+
+.btn-modal-fechar {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 50%;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-modal-fechar:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.modal-titulo {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-family: sans-serif;
+    color: #222;
+    font-size: 1.45rem;
+    font-weight: bold;
+}
+
+.modal-subtitulo {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 24px;
+    font-family: sans-serif;
+}
+
+.opcoes-pagamento-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn-opcao-pagamento {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    font-size: 1.05rem;
+    background-color: #fdfdfd;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #333;
+    font-family: sans-serif;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-opcao-pagamento:hover {
+    background-color: #f5f5f5;
+    border-color: #a0a0a0;
+    transform: translateY(-1px);
+}
+
+.btn-opcao-pagamento svg {
+    color: #e53935; /* Vermelho padrão da pizzaria para os ícones */
+}
+
+/* Passo 2: Sucesso */
+.sucesso-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.sucesso-icone-wrapper {
+    color: #2e7d32;
+    margin-bottom: 16px;
+    animation: bouncePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.sucesso-texto {
+    font-family: sans-serif;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: #444;
+    margin: 0;
+}
+
+.timer-aviso {
+    font-family: sans-serif;
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 24px;
+    font-style: italic;
+}
+
+/* Animações */
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalScaleUp {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bouncePop {
+    0% { transform: scale(0.4); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.btn-timer-container {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-modal-fechar-timer {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: absolute;
+    z-index: 2;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-modal-fechar-timer:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #333;
+}
+
+.svg-countdown {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 34px;
+    height: 34px;
+    transform: rotate(-90deg); /* Gira para o carregamento começar de cima */
+    z-index: 1;
+    pointer-events: none; /* Deixa o clique passar para o botão X */
+}
+
+.svg-countdown-bg {
+    fill: none;
+    stroke: #f0f0f0;
+    stroke-width: 2.5;
+}
+
+.svg-countdown-progress {
+    fill: none;
+    stroke: #2e7d32; /* Verde combinando com o texto de Pronto */
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 88; /* Tamanho exato da circunferência para o raio 14 */
+    stroke-dashoffset: 88;
+    animation: carregarBolinha 10s linear forwards; /* 10s sincronizados com o seu hook */
+}
+
+@keyframes carregarBolinha {
+    to { stroke-dashoffset: 0; }
+}

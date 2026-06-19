@@ -21,31 +21,29 @@
 /* CONTAINER PRINCIPAL DO CARDÁPIO */
 .cardapio-container {
     display: flex;
-    gap: 24px;
-    padding: 24px;
+    gap: 32px; /* Aumentado o respiro entre a lista de pizzas e o carrinho */
+    padding: 32px;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: #fafafa;
     min-height: 100vh;
-    align-items: flex-start; /* Impede esticamento vertical defeituoso */
+    max-width: 1500px; /* Trava o crescimento excessivo em TVs/Monitores ultrawide */
+    margin: 0 auto; /* Centraliza o cardápio na tela */
+
+    /* Foi removido o align-items: flex-start daqui para que a coluna lateral atinja
+       a mesma altura das pizzas e permita a comanda "deslizar" até o fim! */
 }
 
 .coluna-cardapio {
-    flex: 3;
+    flex: 1; /* Ocupa o espaço livre restante */
+    min-width: 0;
 }
 
-/* COLUNA DA DIREITA DINÂMICA: Fixa na tela ao descer a página */
+/* COLUNA DA DIREITA: Apenas o alicerce de tamanho */
 .coluna-pedido {
-    flex: 1;
-    min-width: 320px;
-    position: sticky;
-    top: 24px; /* Distância confortável do topo do navegador */
-    max-height: calc(100vh - 48px); /* Evita estouro vertical da barra lateral */
-    overflow-y: auto; /* Permite rolagem interna se a comanda for muito extensa */
-    background-color: #ffffff;
-    padding: 24px;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-color);
+    width: 430px; /* LARGURA FIXA E AMPLA: O card não será mais espremido! */
+    flex-shrink: 0;
+    /* IMPORTANTE: Sem background, padding ou sticky aqui.
+       O seu arquivo PedidoMesa é que cuida do visual do card! */
 }
 
 .cardapio-header {
@@ -59,23 +57,6 @@
     align-items: center;
     gap: 10px;
     margin: 0;
-}
-
-.status-comanda-box {
-    padding: 14px 18px;
-    border-radius: var(--radius-md);
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    line-height: 1.4;
-    font-size: 0.95rem;
-}
-
-.status-comanda-box.ativa {
-    background-color: var(--success-bg);
-    color: var(--success-text);
-    border: 1px solid rgba(46, 125, 50, 0.2);
 }
 
 /* COORDENAÇÃO DOS CARDS DE PRODUTO */
@@ -207,111 +188,6 @@
 
 .btn-success:hover {
     background-color: #1b5e20;
-}
-
-/* RESUMO DO CARRINHO LATERAL - CORREÇÃO DE DISTÂNCIAS */
-.pedido-subtitulo {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-top: 6px;
-    margin-bottom: 20px;
-}
-
-.lista-carrinho {
-    padding-left: 0;
-    list-style: none;
-    margin: 0;
-}
-
-.item-carrinho {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border-color);
-    gap: 12px; /* Evita que botões batam no texto */
-}
-
-.item-carrinho-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px; /* Afastamento interno entre nome e preço */
-}
-
-.item-carrinho-nome {
-    font-size: 0.95rem;
-    color: var(--text-main);
-    line-height: 1.3;
-}
-
-.item-carrinho-preco {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-.carrinho-controles {
-    display: flex;
-    gap: 6px;
-}
-
-.btn-qty {
-    padding: 6px 10px;
-    border: 1px solid var(--border-color);
-    background-color: #ffffff;
-    cursor: pointer;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-qty:hover {
-    background-color: var(--bg-light);
-}
-
-.total-box {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 700;
-    font-size: 1.1rem;
-    padding: 16px 0;
-    border-top: 2px solid var(--border-color);
-    margin-top: 20px;
-    color: var(--bg-dark);
-}
-
-/* HISTÓRICO DE ITENS JÁ CONFIRMADOS */
-.consumido-section {
-    margin-top: 28px;
-    padding: 16px;
-    border: 1px solid rgba(165, 214, 167, 0.4);
-    border-radius: var(--radius-md);
-    background-color: #f1f8e9;
-}
-
-.lista-consumido {
-    padding-left: 16px;
-    font-size: 0.9rem;
-    margin-bottom: 16px;
-    line-height: 1.5;
-}
-
-.status-badge {
-    margin-left: 8px;
-    font-size: 0.75rem;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-weight: 700;
-}
-
-.status-badge.pronto {
-    background-color: #c8e6c9;
-    color: #1b5e20;
-}
-
-.status-badge.preparo {
-    background-color: #ffe0b2;
-    color: #e65100;
 }
 
 .center-message {
