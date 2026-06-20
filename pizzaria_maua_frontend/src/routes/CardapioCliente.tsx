@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react"; // Adicionado useEffect
+import { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useProdutosAtivos } from "../hooks/useProdutosAtivos";
 import { usePedidoMesaAberto } from "../hooks/usePedidoMesaAberto";
@@ -6,6 +6,7 @@ import { usePedidoCriar } from "../hooks/usePedidoCriar";
 import { usePedidoAdicionarItens } from "../hooks/usePedidoAdicionarItens";
 import { usePedidoFinalizar } from "../hooks/usePedidoFinalizar";
 import ModalPagamento from "../componentes/ModalPagamento";
+import ModalAvisoCarrinho from "../componentes/ModalAvisoCarrinho"; // IMPORTADO
 import ModalDetalhesProduto from "../componentes/ModalDetalhesProduto";
 import ListaCardapio from "../componentes/ListaCardapio";
 import PedidoMesa from "../componentes/PedidoMesa";
@@ -44,7 +45,8 @@ export default function CardapioCliente() {
     const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
     const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoDados | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [isStandBy, setIsStandBy] = useState<boolean>(false); // Estado para controlar o Standby
+    const [isModalAvisoOpen, setIsModalAvisoOpen] = useState<boolean>(false); // ESTADO DO AVISO
+    const [isStandBy, setIsStandBy] = useState<boolean>(false);
 
     const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
     const { data: pedidoAtivo, isLoading: loadingPedido } = usePedidoMesaAberto(numeroMesa);
@@ -53,27 +55,23 @@ export default function CardapioCliente() {
     const { mutate: adicionarItensAoPedido, isPending: adicionando } = usePedidoAdicionarItens();
     const { mutate: finalizarPedido } = usePedidoFinalizar();
 
-    // MONITOR DE INATIVIDADE (5 Minutos) - CORRIGIDO PARA AMBIENTE BROWSER/REACT
+    // MONITOR DE INATIVIDADE (5 Minutos)
     useEffect(() => {
-        if (isStandBy) return; // Se já estiver em standby, não precisa escutar eventos
+        if (isStandBy) return;
 
-        // CORREÇÃO AQUI: Mudamos de NodeJS.Timeout para ReturnType<typeof setTimeout>
         let inactivityTimer: ReturnType<typeof setTimeout>;
 
         const resetarCronometro = () => {
             clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(() => {
                 setIsStandBy(true);
-            }, 1 * 60 * 1000); // 1 minuto (1 * 60 * 1000ms)
+            }, 1 * 60 * 1000); // 1 minuto
         };
 
-        // Eventos de toque/clique no tablet que reiniciam a contagem do tempo
         const eventosInteracao = ["mousemove", "mousedown", "touchstart", "click", "scroll"];
 
-        // Inicia a primeira contagem
         resetarCronometro();
 
-        // Adiciona os listeners para capturar ações do cliente
         eventosInteracao.forEach(evento => window.addEventListener(evento, resetarCronometro));
 
         return () => {
@@ -87,7 +85,7 @@ export default function CardapioCliente() {
             const itemExistente = carrinhoAtual.find(item => item.produto.id === produto.id);
             if (itemExistente) {
                 return carrinhoAtual.map(item =>
-                    item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item
+                    item.produto.id === produto.id ? { ...item, Academic: item.quantidade + 1 } : item
                 );
             }
             return [...carrinhoAtual, { produto, quantidade: 1 }];
@@ -151,6 +149,22 @@ export default function CardapioCliente() {
     const possuiItensConsumidos = itensConsumidos.length > 0;
     const todosItensProntos = possuiItensConsumidos && itensConsumidos.every(item => item.status === "PRONTO");
 
+    // LÓGICA DE INTERCEPTAÇÃO DO PAGAMENTO
+    const handleSolicitarPagamento = () => {
+        if (carrinho.length > 0) {
+            setIsModalAvisoOpen(true); // Se houver itens esquecidos, barra e avisa
+        } else {
+            setIsModalOpen(true); // Se estiver limpo, segue fluxo padrão de pagamento
+        }
+    };
+
+    // CONFIRMAÇÃO DE DESCARTE DENTRO DO MODAL DE AVISO
+    const handleDescartarEPagar = () => {
+        limparCarrinho(); // Zera o carrinho para evitar contaminação do próximo cliente
+        setIsModalAvisoOpen(false);
+        setIsModalOpen(true); // Abre a tela final de escolha do pagamento
+    };
+
     const handleFechamentoModal = (formaPagamentoSelecionada?: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
         setIsModalOpen(false);
         if (formaPagamentoSelecionada && pedidoAtivo) {
@@ -159,7 +173,6 @@ export default function CardapioCliente() {
                 numeroMesa: numeroMesa,
                 formaPagamento: formaPagamentoSelecionada
             }, {
-                // Ao finalizar o pagamento com sucesso, joga o tablet direto para a tela de StandBy
                 onSuccess: () => {
                     setIsStandBy(true);
                 }
@@ -169,7 +182,6 @@ export default function CardapioCliente() {
 
     const produtosCardapio = produtos?.filter(p => p.ativo) || [];
 
-    // INTERCEPTADOR DE TELA: Se estiver ativo, renderiza apenas o Standby cobrindo tudo
     if (isStandBy) {
         return <StandByPizzaria onToque={() => setIsStandBy(false)} />;
     }
@@ -211,7 +223,7 @@ export default function CardapioCliente() {
                 />
             </div>
 
-            {/* SEÇÃO DIREITA: BARRA LATERAL TOTALMENTE MODULARIZADA */}
+            {/* SEÇÃO DIREITA: BARRA LATERAL */}
             <div className="coluna-pedido">
                 <PedidoMesa
                     carrinho={carrinho}
@@ -224,13 +236,21 @@ export default function CardapioCliente() {
                     itensConsumidos={itensConsumidos}
                     possuiItensConsumidos={possuiItensConsumidos}
                     todosItensProntos={todosItensProntos}
-                    onAbrirPagamento={() => setIsModalOpen(true)}
+                    onAbrirPagamento={handleSolicitarPagamento} /* ALTERADO AQUI */
                 />
             </div>
 
+            {/* MODAL PADRÃO DE PAGAMENTO (MÉTODOS DE PAGAMENTO) */}
             <ModalPagamento
                 isOpen={isModalOpen}
                 onClose={handleFechamentoModal}
+            />
+
+            {/* NOVO MODAL DE SEGURANÇA E DE ALERTA DO CARRINHO */}
+            <ModalAvisoCarrinho
+                isOpen={isModalAvisoOpen}
+                onClose={() => setIsModalAvisoOpen(false)}
+                onConfirmarPagamento={handleDescartarEPagar}
             />
 
             <ModalDetalhesProduto

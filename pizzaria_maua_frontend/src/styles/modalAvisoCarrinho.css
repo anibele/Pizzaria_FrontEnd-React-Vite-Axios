@@ -1,0 +1,99 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-aviso-content {
+    background-color: #fff;
+    border-radius: var(--radius-md);
+    width: 90%;
+    max-width: 480px;
+    padding: 32px;
+    box-shadow: var(--shadow-md);
+    animation: slideUpFade 0.3s ease-out;
+}
+
+.modal-aviso-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.icon-warning-bg {
+    background-color: #fff3e0;
+    padding: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-aviso-header h2 {
+    margin: 0;
+    color: var(--bg-dark);
+    font-size: 1.5rem;
+}
+
+.modal-aviso-body {
+    text-align: center;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 32px;
+    font-size: 1.05rem;
+}
+
+.aviso-destaque {
+    font-weight: 600;
+    color: var(--text-main);
+    margin-top: 16px;
+}
+
+.modal-aviso-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn-danger {
+    background-color: #d32f2f;
+    color: white;
+    width: 100%;
+    padding: 14px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+    background-color: #b71c1c;
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
