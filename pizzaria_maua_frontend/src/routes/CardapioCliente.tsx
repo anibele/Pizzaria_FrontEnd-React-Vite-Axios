@@ -6,7 +6,7 @@ import { usePedidoCriar } from "../hooks/usePedidoCriar";
 import { usePedidoAdicionarItens } from "../hooks/usePedidoAdicionarItens";
 import { usePedidoFinalizar } from "../hooks/usePedidoFinalizar";
 import ModalPagamento from "../componentes/ModalPagamento";
-import ModalAvisoCarrinho from "../componentes/ModalAvisoCarrinho"; // IMPORTADO
+import ModalAvisoCarrinho from "../componentes/ModalAvisoCarrinho";
 import ModalDetalhesProduto from "../componentes/ModalDetalhesProduto";
 import ListaCardapio from "../componentes/ListaCardapio";
 import PedidoMesa from "../componentes/PedidoMesa";
@@ -45,8 +45,11 @@ export default function CardapioCliente() {
     const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
     const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoDados | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [isModalAvisoOpen, setIsModalAvisoOpen] = useState<boolean>(false); // ESTADO DO AVISO
+    const [isModalAvisoOpen, setIsModalAvisoOpen] = useState<boolean>(false);
     const [isStandBy, setIsStandBy] = useState<boolean>(false);
+
+    // Controle interno para o fluxo de finalização do pagamento
+    const [pagamentoSolicitado, setPagamentoSolicitado] = useState<boolean>(false);
 
     const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
     const { data: pedidoAtivo, isLoading: loadingPedido } = usePedidoMesaAberto(numeroMesa);
@@ -55,7 +58,7 @@ export default function CardapioCliente() {
     const { mutate: adicionarItensAoPedido, isPending: adicionando } = usePedidoAdicionarItens();
     const { mutate: finalizarPedido } = usePedidoFinalizar();
 
-    // MONITOR DE INATIVIDADE (5 Minutos)
+    // MONITOR DE INATIVIDADE (1 Minuto)
     useEffect(() => {
         if (isStandBy) return;
 
@@ -65,7 +68,7 @@ export default function CardapioCliente() {
             clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(() => {
                 setIsStandBy(true);
-            }, 1 * 60 * 1000); // 1 minuto
+            }, 60 * 1000);
         };
 
         const eventosInteracao = ["mousemove", "mousedown", "touchstart", "click", "scroll"];
@@ -85,13 +88,14 @@ export default function CardapioCliente() {
             const itemExistente = carrinhoAtual.find(item => item.produto.id === produto.id);
             if (itemExistente) {
                 return carrinhoAtual.map(item =>
-                    item.produto.id === produto.id ? { ...item, Academic: item.quantidade + 1 } : item
+                    item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item
                 );
             }
             return [...carrinhoAtual, { produto, quantidade: 1 }];
         });
     };
 
+    // CORRIGIDO: Removidas as referências incorretas a 'whitespace'
     const handleRemoverOuDiminuir = (produtoId: number) => {
         setCarrinho((carrinhoAtual) => {
             const item = carrinhoAtual.find(i => i.produto.id === produtoId);
@@ -149,34 +153,40 @@ export default function CardapioCliente() {
     const possuiItensConsumidos = itensConsumidos.length > 0;
     const todosItensProntos = possuiItensConsumidos && itensConsumidos.every(item => item.status === "PRONTO");
 
-    // LÓGICA DE INTERCEPTAÇÃO DO PAGAMENTO
     const handleSolicitarPagamento = () => {
         if (carrinho.length > 0) {
-            setIsModalAvisoOpen(true); // Se houver itens esquecidos, barra e avisa
+            setIsModalAvisoOpen(true);
         } else {
-            setIsModalOpen(true); // Se estiver limpo, segue fluxo padrão de pagamento
+            setPagamentoSolicitado(false);
+            setIsModalOpen(true);
         }
     };
 
-    // CONFIRMAÇÃO DE DESCARTE DENTRO DO MODAL DE AVISO
     const handleDescartarEPagar = () => {
-        limparCarrinho(); // Zera o carrinho para evitar contaminação do próximo cliente
+        limparCarrinho();
         setIsModalAvisoOpen(false);
-        setIsModalOpen(true); // Abre a tela final de escolha do pagamento
+        setPagamentoSolicitado(false);
+        setIsModalOpen(true);
     };
 
-    const handleFechamentoModal = (formaPagamentoSelecionada?: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
-        setIsModalOpen(false);
-        if (formaPagamentoSelecionada && pedidoAtivo) {
+    const handleEnviarSolicitacaoPagamento = (formaPagamentoSelecionada: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
+        if (pedidoAtivo) {
+            setPagamentoSolicitado(true);
+
             finalizarPedido({
                 pedidoId: pedidoAtivo.id,
                 numeroMesa: numeroMesa,
                 formaPagamento: formaPagamentoSelecionada
-            }, {
-                onSuccess: () => {
-                    setIsStandBy(true);
-                }
             });
+        }
+    };
+
+    const handleFechamentoModal = () => {
+        setIsModalOpen(false);
+
+        if (pagamentoSolicitado) {
+            setIsStandBy(true);
+            setPagamentoSolicitado(false);
         }
     };
 
@@ -236,14 +246,15 @@ export default function CardapioCliente() {
                     itensConsumidos={itensConsumidos}
                     possuiItensConsumidos={possuiItensConsumidos}
                     todosItensProntos={todosItensProntos}
-                    onAbrirPagamento={handleSolicitarPagamento} /* ALTERADO AQUI */
+                    onAbrirPagamento={handleSolicitarPagamento}
                 />
             </div>
 
-            {/* MODAL PADRÃO DE PAGAMENTO (MÉTODOS DE PAGAMENTO) */}
+            {/* MODAL PADRÃO DE PAGAMENTO */}
             <ModalPagamento
                 isOpen={isModalOpen}
                 onClose={handleFechamentoModal}
+                onSolicitarPagamento={handleEnviarSolicitacaoPagamento}
             />
 
             {/* NOVO MODAL DE SEGURANÇA E DE ALERTA DO CARRINHO */}

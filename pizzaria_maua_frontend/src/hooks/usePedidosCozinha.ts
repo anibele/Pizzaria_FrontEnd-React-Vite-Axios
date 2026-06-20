@@ -11,6 +11,8 @@ export function usePedidosCozinha() {
     return useQuery({
         queryKey: ["pedidos-cozinha"],
         queryFn: buscarPedidosCozinha,
-        refetchInterval: 5000, // Mantém o Pooling ativo a cada 5 segundos para a cozinha
+        refetchInterval: 2000,
+        staleTime: 0,
+        gcTime: 0,             
     });
 }

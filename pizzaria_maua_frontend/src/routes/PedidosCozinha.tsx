@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePedidosCozinha } from "../hooks/usePedidosCozinha";
 import { usePedidoItemStatus } from "../hooks/usePedidoItemStatus";
+import { useNotification } from "../contexts/NotificationContext";
+import NavbarCozinha from "../componentes/NavbarCozinha";
+import CardPedidoCozinha from "../componentes/CardPedidoCozinha";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import "../styles/pedidosCozinha.css";
 
 interface ItemPedidoCozinha {
     id: number;
@@ -15,6 +20,7 @@ interface PedidoCozinhaDados {
     id: number;
     numeroMesa: number;
     dataHora: string;
+    status: "ABERTO" | "AGUARDANDO_PAGAMENTO" | "FINALIZADO"; // 👈 Alinhado com o Back-end
     formaPagamento: string;
     itens: ItemPedidoCozinha[];
 }
@@ -22,131 +28,109 @@ interface PedidoCozinhaDados {
 export default function PedidosCozinha() {
     const { data, isLoading, isError } = usePedidosCozinha();
     const { mutate: atualizarStatus } = usePedidoItemStatus();
+    const { adicionarNotificacao } = useNotification(); // 👈 Destruturado aqui
 
-    // Estado local para controlar a animação/sumiço imediato do item
     const [itensDespachados, setItensDespachados] = useState<number[]>([]);
+
+    // Guardas de estado para o algoritmo de comparação (Diffing)
+    const prevPedidosRef = useRef<PedidoCozinhaDados[]>([]);
+    const isFirstLoadRef = useRef(true);
 
     const pedidos = (data as unknown as PedidoCozinhaDados[]) || [];
 
-    const handleMarcarComoEntregue = (itemId: number) => {
-        // 1. Adiciona o ID ao estado local para acionar o efeito "verdinho" instantâneo
-        setItensDespachados((prev) => [...prev, itemId]);
+    // 🔥 Algoritmo de Diffing: Compara a lista antiga com a nova a cada Polling
+    useEffect(() => {
+        if (isLoading || isError || !data) return;
 
-        // 2. Dispara a requisição para o back-end Java em segundo plano
+        const novosPedidos = data as unknown as PedidoCozinhaDados[];
+
+        // Se for a primeiríssima carga, apenas salvamos o estado atual e pulamos os alertas
+        if (isFirstLoadRef.current) {
+            prevPedidosRef.current = novosPedidos;
+            isFirstLoadRef.current = false;
+            return;
+        }
+
+        // Varre a nova lista comparando com o histórico em memória
+        novosPedidos.forEach((newPedido) => {
+            const oldPedido = prevPedidosRef.current.find((p) => p.id === newPedido.id);
+
+            if (!oldPedido) {
+                // GATILHO 1: O ID do pedido não existia na lista anterior -> Novo Pedido!
+                adicionarNotificacao("NOVO_PEDIDO", newPedido.numeroMesa);
+            } else {
+                // GATILHO 2: Verificando se novos itens foram adicionados à mesma mesa
+                if (newPedido.itens.length > oldPedido.itens.length) {
+                    adicionarNotificacao("ITENS_ADICIONADOS", newPedido.numeroMesa);
+                }
+
+                // GATILHO 3: Verificando se o cliente solicitou a conta pelo tablet
+                if (
+                    newPedido.status === "AGUARDANDO_PAGAMENTO" &&
+                    oldPedido.status !== "AGUARDANDO_PAGAMENTO"
+                ) {
+                    adicionarNotificacao("PAGAMENTO", newPedido.numeroMesa, newPedido.formaPagamento);
+                }
+            }
+        });
+
+        // Atualiza a referência em memória para a próxima verificação daqui a 5 segundos
+        prevPedidosRef.current = novosPedidos;
+    }, [data, isLoading, isError, adicionarNotificacao]);
+
+    const handleMarcarComoEntregue = (itemId: number) => {
+        setItensDespachados((prev) => [...prev, itemId]);
         atualizarStatus({ itemId, status: "PRONTO" });
     };
 
-    const formatarHora = (dataString: string) => {
-        try {
-            const dataObjeto = new Date(dataString);
-            return dataObjeto.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } catch {
-            return "--:--";
-        }
-    };
+    if (isLoading) {
+        return (
+            <div className="cozinha-tela-mensagem">
+                <Loader2 className="animate-spin" size={64} color="#e53935" />
+                <h2>Carregando sistema da cozinha...</h2>
+            </div>
+        );
+    }
 
-    if (isLoading) return <p>⏳ Carregando monitor da cozinha...</p>;
-    if (isError) return <p>❌ Erro ao conectar com o monitor de pedidos da cozinha.</p>;
+    if (isError) {
+        return (
+            <div className="cozinha-tela-mensagem erro">
+                <AlertCircle size={64} color="#d32f2f" />
+                <h2>Erro de conexão</h2>
+                <p>Não foi possível conectar com o servidor. Verifique a rede.</p>
+            </div>
+        );
+    }
+
+    // Filtra se sobrou algum pedido pendente/em preparo para exibir na tela
+    const existemPedidosAtivos = pedidos.some(pedido =>
+        pedido.itens.some(item => item.status !== "PRONTO" && !itensDespachados.includes(item.id))
+    );
 
     return (
-        <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
-            <h2>👨‍🍳 Monitor de Pedidos Ativos (Cozinha)</h2>
-            <p>Clique em <strong>✓ Entregue</strong> assim que o prato sair para a mesa. O item sumirá automaticamente.</p>
+        <div className="cozinha-dashboard-bg">
+            <NavbarCozinha />
 
-            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginTop: "20px" }}>
-                {pedidos.length > 0 ? (
-                    pedidos.map((pedido) => {
-                        // Filtra os itens: remove o que o back-end já consolidou como PRONTO
-                        // E remove também o que acabou de ser clicado localmente (após o delay)
-                        const itensAtivos = (pedido.itens || []).filter(
-                            (item) => item.status !== "PRONTO" && !itensDespachados.includes(item.id)
-                        );
-
-                        // Se todos os itens do card sumiram, não precisamos mostrar o card vazio da mesa
-                        if (itensAtivos.length === 0) return null;
-
-                        return (
-                            <div
-                                key={pedido.id}
-                                style={{
-                                    border: "2px solid #333",
-                                    borderRadius: "8px",
-                                    width: "320px",
-                                    padding: "15px",
-                                    backgroundColor: "#fffde6",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    justifyContent: "space-between",
-                                    transition: "all 0.3s ease"
-                                }}
-                            >
-                                <div>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px dashed #333", paddingBottom: "10px" }}>
-                                        <h3 style={{ margin: 0 }}>MESA {pedido.numeroMesa}</h3>
-                                        <span style={{ fontSize: "0.9em", color: "#555" }}>⏱️ {formatarHora(pedido.dataHora)}</span>
-                                    </div>
-
-                                    <ul style={{ paddingLeft: "0", listStyle: "none", marginTop: "15px" }}>
-                                        {itensAtivos.map((item) => {
-                                            const foiClicado = itensDespachados.includes(item.id);
-
-                                            return (
-                                                <li
-                                                    key={item.id}
-                                                    style={{
-                                                        display: "flex",
-                                                        justifyContent: "space-between",
-                                                        alignItems: "center",
-                                                        marginBottom: "12px",
-                                                        fontSize: "1.05em",
-                                                        borderBottom: "1px solid rgba(0,0,0,0.05)",
-                                                        paddingBottom: "6px",
-                                                        paddingLeft: foiClicado ? "8px" : "0",
-                                                        paddingRight: foiClicado ? "8px" : "0",
-                                                        borderRadius: "4px",
-                                                        // EFEITO VISUAL: Se foi clicado, fica verde instantaneamente
-                                                        backgroundColor: foiClicado ? "#c8e6c9" : "transparent",
-                                                        color: foiClicado ? "#1b5e20" : "#000",
-                                                        transition: "all 0.2s ease"
-                                                    }}
-                                                >
-                                                    <div style={{ flex: 1, paddingRight: "10px" }}>
-                                                        <strong>{item.quantidade}x</strong> {item.produtoNome}
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => handleMarcarComoEntregue(item.id)}
-                                                        disabled={foiClicado}
-                                                        style={{
-                                                            padding: "6px 10px",
-                                                            backgroundColor: foiClicado ? "#81c784" : "#2e7d32",
-                                                            color: "white",
-                                                            border: "none",
-                                                            borderRadius: "4px",
-                                                            fontSize: "0.85em",
-                                                            fontWeight: "bold",
-                                                            cursor: "pointer",
-                                                            transition: "background-color 0.2s"
-                                                        }}
-                                                    >
-                                                        {foiClicado ? "✓" : "✓ Entregue"}
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                </div>
-
-                                <div style={{ borderTop: "1px dashed #333", paddingTop: "8px", marginTop: "10px", fontSize: "0.8em", color: "#666", textAlign: "center" }}>
-                                    Comanda ID: #{pedido.id}
-                                </div>
-                            </div>
-                        );
-                    })
+            <main className="cozinha-main-content">
+                {!existemPedidosAtivos ? (
+                    <div className="cozinha-vazia">
+                        <CheckCircle2 size={80} color="#2e7d32" />
+                        <h2>Tudo limpo por aqui!</h2>
+                        <p>Nenhum pedido aguardando preparo no momento. Bom trabalho!</p>
+                    </div>
                 ) : (
-                    <p style={{ color: "#666" }}>Pouco movimento por aqui. Nenhum pedido em preparo no momento! 🍕</p>
+                    <div className="cozinha-grid-pedidos">
+                        {pedidos.map((pedido) => (
+                            <CardPedidoCozinha
+                                key={pedido.id}
+                                pedido={pedido}
+                                itensDespachados={itensDespachados}
+                                onMarcarComoEntregue={handleMarcarComoEntregue}
+                            />
+                        ))}
+                    </div>
                 )}
-            </div>
+            </main>
         </div>
     );
 }

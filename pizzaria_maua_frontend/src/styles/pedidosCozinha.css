@@ -1,0 +1,60 @@
+/* Fundo total da tela ocupando 100vh para imitar um PDV real */
+.cozinha-dashboard-bg {
+    background-color: #eef2f5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.cozinha-main-content {
+    padding: 32px;
+    flex: 1;
+}
+
+/* Grid automático responsivo: os cards vão se alinhando sozinhos */
+.cozinha-grid-pedidos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 24px;
+    align-items: start; /* Impede que cards de tamanhos diferentes se estiquem */
+}
+
+/* Mensagens centrais de Loading, Erro e "Tudo Limpo" */
+.cozinha-tela-mensagem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: #eef2f5;
+    color: #444;
+    gap: 16px;
+    font-family: 'Inter', sans-serif;
+}
+
+.cozinha-tela-mensagem.erro {
+    color: #d32f2f;
+}
+
+.cozinha-vazia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: calc(100vh - 200px);
+    text-align: center;
+    color: #555;
+    animation: fadeInScale 0.4s ease-out;
+}
+
+.cozinha-vazia h2 {
+    margin-top: 24px;
+    font-size: 2rem;
+    color: #2e7d32;
+    margin-bottom: 8px;
+}
+
+.cozinha-vazia p {
+    font-size: 1.2rem;
+}

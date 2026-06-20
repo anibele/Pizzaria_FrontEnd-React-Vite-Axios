@@ -4,44 +4,35 @@ import "../styles/modalPagamento.css";
 
 interface ModalPagamentoProps {
     isOpen: boolean;
-    onClose: (formaPagamentoConcluida?: 'PIX' | 'CARTAO' | 'DINHEIRO') => void;
+    onClose: () => void; // O onClose serve apenas para fechar o modal visualmente
+    onSolicitarPagamento: (forma: 'PIX' | 'CARTAO' | 'DINHEIRO') => void; // Dispara o BACK-END na hora!
 }
 
-export default function ModalPagamento({ isOpen, onClose }: ModalPagamentoProps) {
+export default function ModalPagamento({ isOpen, onClose, onSolicitarPagamento }: ModalPagamentoProps) {
     const [passo, setPasso] = useState<1 | 2>(1);
-    const [formaEscolhida, setFormaEscolhida] = useState<'PIX' | 'CARTAO' | 'DINHEIRO' | "">("");
 
-    // TIMER AUTOMÁTICO DE 10 SEGUNDOS PARA O PASSO 2
+    // TIMER AUTOMÁTICO DE 10 SEGUNDOS PARA O PASSO 2 (Apenas visual)
     useEffect(() => {
         if (!isOpen || passo !== 2) return;
 
         const autoCloseTimer = setTimeout(() => {
-            if (formaEscolhida !== "") {
-                onClose(formaEscolhida);
-            } else {
-                onClose();
-            }
-            // Pequeno delay para resetar o passo após a animação de fade-out do modal
+            onClose(); // Apenas fecha a tela, o pagamento já foi enviado no passo 1
             setTimeout(() => setPasso(1), 300);
-        }, 10000); // 10000ms = 10 segundos
+        }, 10000);
 
-        // Limpa o temporizador caso o usuário clique no "X" manualmente antes do tempo
         return () => clearTimeout(autoCloseTimer);
-    }, [passo, isOpen, formaEscolhida, onClose]);
+    }, [passo, isOpen, onClose]);
 
     if (!isOpen) return null;
 
     const handleEscolherForma = (forma: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
-        setFormaEscolhida(forma);
-        setPasso(2);
+        // 🔥 PASSO CHAVE: Avisa o componente Pai para atualizar o banco de dados AGORA!
+        onSolicitarPagamento(forma);
+        setPasso(2); // Avança para a animação de sucesso
     };
 
     const handleFecharManualmente = () => {
-        if (passo === 2 && formaEscolhida !== "") {
-            onClose(formaEscolhida);
-        } else {
-            onClose();
-        }
+        onClose(); // Fecha direto
         setTimeout(() => setPasso(1), 300);
     };
 
@@ -49,8 +40,7 @@ export default function ModalPagamento({ isOpen, onClose }: ModalPagamentoProps)
         <div className="modal-overlay">
             <div className="modal-container">
 
-                {/* --- AQUI ESTÁ A MUDANÇA CIRÚRGICA --- */}
-                {/* Botão de Fechar fixo no topo direito (Muda conforme o passo) */}
+                {/* Botão de Fechar fixo no topo direito */}
                 {passo === 1 ? (
                     <button onClick={handleFecharManualmente} className="btn-modal-fechar" title="Fechar">
                         <X size={22} />
@@ -66,7 +56,6 @@ export default function ModalPagamento({ isOpen, onClose }: ModalPagamentoProps)
                         </svg>
                     </div>
                 )}
-                {/* ------------------------------------ */}
 
                 {passo === 1 ? (
                     <>
@@ -97,7 +86,7 @@ export default function ModalPagamento({ isOpen, onClose }: ModalPagamentoProps)
                         <p className="sucesso-texto">
                             Aguarde o nosso funcionário na sua mesa para finalizar o pagamento.
                         </p>
-                        <span className="timer-aviso">Esta tela fechará automaticamente em instantes...</span>
+                        <span className="timer-aviso">Esta tela fechará automaticamente inles...</span>
                     </div>
                 )}
             </div>

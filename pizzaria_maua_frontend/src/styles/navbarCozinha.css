@@ -1,0 +1,58 @@
+.nav-cozinha-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    padding: 16px 32px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.nav-cozinha-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nav-cozinha-logo h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.nav-cozinha-acoes {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.nav-cozinha-usuario {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.05rem;
+    color: #e0e0e0;
+}
+
+.btn-cozinha-logout {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #d32f2f;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-cozinha-logout:hover {
+    background-color: #b71c1c;
+}

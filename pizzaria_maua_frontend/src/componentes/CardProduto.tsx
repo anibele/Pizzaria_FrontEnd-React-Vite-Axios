@@ -8,23 +8,11 @@ interface CardProdutoProps {
 }
 
 export default function CardProduto({ produto, onVerDetalhes, onAdicionar }: CardProdutoProps) {
-    let ehVegano = false;
-
     // Identifica se o produto atual pertence à categoria de bebidas
     const ehBebida = produto.categoria?.toUpperCase() === "BEBIDAS";
 
-    // Só analisa o JSON descritivo se o produto NÃO for uma bebida
-    if (!ehBebida) {
-        try {
-            if (produto.descricao && (produto.descricao.startsWith("{") || produto.descricao.startsWith("["))) {
-                const dadosParseados = JSON.parse(produto.descricao);
-                ehVegano = dadosParseados.pratoVegano === "Sim";
-            }
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (error) {
-            // Ignora falhas de parse de forma segura para não travar a renderização
-        }
-    }
+    // 👈 CORREÇÃO: Agora lemos diretamente a propriedade booleana do objeto mapeado
+    const ehVegano = !ehBebida && produto.descricao?.pratoVegano === true;
 
     return (
         <div className="card-produto">
