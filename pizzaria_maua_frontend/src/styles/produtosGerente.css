@@ -1,0 +1,141 @@
+.gerente-produtos-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+
+.topo-painel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    background: #fff;
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.topo-painel h2 { margin: 0 0 8px 0; color: #1e293b; }
+.topo-painel p { margin: 0; color: #64748b; }
+
+.btn-novo-produto {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #2563eb;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-novo-produto:hover { background-color: #1d4ed8; }
+
+.grid-produtos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+/* Card do Gerente */
+.card-gerente {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.2s;
+}
+
+.card-gerente.inativo { opacity: 0.75; filter: grayscale(40%); }
+.card-gerente:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+
+.card-gerente-badges {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+}
+
+.badge-ativo, .badge-inativo {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+.badge-ativo { background-color: #10b981; }
+.badge-inativo { background-color: #64748b; }
+
+.card-gerente-imagem { width: 100%; height: 180px; object-fit: cover; }
+.card-gerente-conteudo { padding: 20px; }
+
+.card-gerente-header { margin-bottom: 16px; }
+.card-gerente-categoria { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+.card-gerente-nome { margin: 4px 0 0 0; font-size: 1.1rem; color: #0f172a; }
+
+.card-gerente-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; }
+.card-gerente-preco { font-weight: 700; color: #2563eb; font-size: 1.1rem; margin: 0; }
+.card-gerente-estoque { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #475569; margin: 0; }
+
+.card-gerente-acoes { display: flex; gap: 10px; }
+.card-gerente-acoes button { flex: 1; display: flex; justify-content: center; align-items: center; gap: 6px; padding: 10px; border-radius: 6px; border: none; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+.btn-gerente-editar { background-color: #f1f5f9; color: #334155; }
+.btn-gerente-editar:hover { background-color: #e2e8f0; }
+.btn-gerente-deletar { background-color: #fef2f2; color: #dc2626; }
+.btn-gerente-deletar:hover { background-color: #fee2e2; }
+
+/* Modais Base */
+.overlay-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px); }
+.modal-conteudo { background: #fff; border-radius: 16px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+.modal-largo { max-width: 800px; }
+.modal-pequeno { max-width: 400px; padding: 32px; text-align: center; }
+
+/* Modal Deleção Específico */
+.modal-deletar-header { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 16px; }
+.modal-deletar-header h3 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+.modal-pequeno p { color: #475569; margin-bottom: 24px; line-height: 1.5; }
+.modal-deletar-acoes { display: flex; gap: 12px; }
+.modal-deletar-acoes button { flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; }
+.btn-deletar-confirmar { background-color: #dc2626; color: white; }
+.btn-deletar-confirmar:hover { background-color: #b91c1c; }
+
+/* --- ESTILOS DAS SEÇÕES POR CATEGORIA --- */
+.secao-gerente {
+    margin-bottom: 48px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.secao-gerente-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.secao-gerente-titulo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    font-size: 1.5rem;
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.secao-gerente-contador {
+    background-color: #f1f5f9;
+    color: #64748b;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}

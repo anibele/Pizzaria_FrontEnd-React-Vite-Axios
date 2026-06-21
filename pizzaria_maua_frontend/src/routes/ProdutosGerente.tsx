@@ -1,56 +1,92 @@
 import { useState } from "react";
+import { Plus, AlertTriangle } from "lucide-react";
 import { useProdutoDados } from "../hooks/useProdutoDados";
-import { CartaoProduto } from "../componentes/CartaoProduto";
+import { useProdutoDeletar } from "../hooks/useProdutosMutateDelete.ts";
 import { FormularioProduto } from "../componentes/FormularioProduto";
-//import "./ProdutosGerente.css";
+import { ListaProdutosGerente } from "../componentes/ListaProdutosGerente"; // 👈 Importação nova
+import type { ProdutoDados } from "../interfaces/ProdutoDados";
+import "../styles/produtosGerente.css";
 
 export default function ProdutosGerente() {
-    // Consome os dados da API usando o hook assíncrono do TanStack Query
     const { data: produtos, isLoading, isError } = useProdutoDados();
+    const { mutate: deletarProduto, isPending: isDeleting } = useProdutoDeletar();
 
-    // Estado local para gerenciar a abertura do modal de NOVO produto
-    const [modalNovoAberto, setModalNovoAberto] = useState(false);
+    const [modalFormAberto, setModalFormAberto] = useState(false);
+    const [produtoEmEdicao, setProdutoEmEdicao] = useState<ProdutoDados | undefined>(undefined);
+    const [produtoParaDeletar, setProdutoParaDeletar] = useState<ProdutoDados | undefined>(undefined);
 
-    if (isLoading) return <div className="status-tela"><p>⏳ Carregando produtos do banco de dados...</p></div>;
-    if (isError) return <div className="status-tela error"><p>❌ Erro ao conectar com a API do Spring Boot. Verifique o servidor.</p></div>;
+    const abrirModalNovo = () => {
+        setProdutoEmEdicao(undefined);
+        setModalFormAberto(true);
+    };
+
+    const abrirModalEditar = (produto: ProdutoDados) => {
+        setProdutoEmEdicao(produto);
+        setModalFormAberto(true);
+    };
+
+    const confirmarDelecao = () => {
+        if (produtoParaDeletar?.id) {
+            deletarProduto(produtoParaDeletar.id, {
+                onSuccess: () => setProdutoParaDeletar(undefined)
+            });
+        }
+    };
+
+    if (isLoading) return <div className="status-tela"><p>⏳ Sincronizando com o estoque...</p></div>;
+    if (isError) return <div className="status-tela error"><p>❌ Erro de conexão com a API.</p></div>;
 
     return (
-        <div className="gerente-produtos-container">
+        <div className="gerente-produtos-container animate-fade-in">
             <div className="topo-painel">
                 <div>
-                    <h2>📦 Gestão do Cardápio e Estoque</h2>
-                    <p>Visualize, edite, exclua ou adicione novos produtos à Pizzaria Mauá.</p>
+                    <h2>📦 Gestão do Cardápio</h2>
+                    <p>Controle os produtos, estoque e disponibilidade na loja.</p>
                 </div>
-                <button
-                    className="btn-novo-produto"
-                    onClick={() => setModalNovoAberto(true)}
-                >
-                    + Cadastrar Novo Item
+                <button className="btn-novo-produto" onClick={abrirModalNovo}>
+                    <Plus size={20} /> Cadastrar Produto
                 </button>
             </div>
 
-            {/* Grid dinâmica renderizando os cartões de produtos */}
-            <div className="grid-produtos">
-                {produtos && produtos.length > 0 ? (
-                    produtos.map((produto) => (
-                        <CartaoProduto key={produto.id} produto={produto} />
-                    ))
-                ) : (
-                    <p className="sem-produtos">Nenhum produto cadastrado no banco de dados.</p>
-                )}
-            </div>
+            {/* 👇 Aqui chamamos a Lista Separada por Categorias */}
+            {produtos && produtos.length > 0 ? (
+                <ListaProdutosGerente
+                    produtos={produtos}
+                    onEditar={abrirModalEditar}
+                    onDeletar={setProdutoParaDeletar}
+                />
+            ) : (
+                <div className="sem-produtos">Nenhum produto cadastrado no banco de dados.</div>
+            )}
 
-            {/* Modal para inserção de um novo produto do zero */}
-            {modalNovoAberto && (
-                <div className="overlay">
-                    <div className="modal">
-                        <button
-                            className="fechar"
-                            onClick={() => setModalNovoAberto(false)}
-                        >
-                            X
-                        </button>
-                        <FormularioProduto fecharModal={() => setModalNovoAberto(false)} />
+            {modalFormAberto && (
+                <div className="overlay-modal">
+                    <div className="modal-conteudo modal-largo">
+                        <FormularioProduto
+                            fecharModal={() => setModalFormAberto(false)}
+                            produtoParaEditar={produtoEmEdicao}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {produtoParaDeletar && (
+                <div className="overlay-modal">
+                    <div className="modal-conteudo modal-pequeno animate-fade-in">
+                        <div className="modal-deletar-header">
+                            <AlertTriangle size={40} color="#e53935" />
+                            <h3>Excluir Produto?</h3>
+                        </div>
+                        <p>Tem certeza que deseja remover <strong>{produtoParaDeletar.nome}</strong>? Esta ação não pode ser desfeita.</p>
+
+                        <div className="modal-deletar-acoes">
+                            <button className="btn-cancelar" onClick={() => setProdutoParaDeletar(undefined)} disabled={isDeleting}>
+                                Cancelar
+                            </button>
+                            <button className="btn-deletar-confirmar" onClick={confirmarDelecao} disabled={isDeleting}>
+                                {isDeleting ? "Excluindo..." : "Sim, Excluir"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
 import Login from "../pages/Login";
+import DashboardGerente from "../pages/DashboardGerente";
 import ProdutosGerente from "./ProdutosGerente";
 import MesasGerente from "./MesasGerente";
 import PedidosCozinha from "./PedidosCozinha";
@@ -12,15 +13,30 @@ export default function AppRoutes() {
             {/* Rota Pública de Autenticação */}
             <Route path="/login" element={<Login />} />
 
-            {/* Rotas Administrativas (Painel do Gerente) */}
+            {/* Redirecionamento da Raiz para a Dashboard */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+            {/* 📊 Rota da Dashboard Principal (Nova) */}
             <Route
-                path="/"
+                path="/dashboard"
+                element = {
+                    <ProtectedRoute allowedRoles={["GERENTE"]}>
+                        <DashboardGerente />
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* 📦 Rota de Gestão do Cardápio (Atualizada de "/" para "/produtos") */}
+            <Route
+                path="/produtos"
                 element = {
                     <ProtectedRoute allowedRoles={["GERENTE"]}>
                         <ProdutosGerente />
                     </ProtectedRoute>
                 }
             />
+
+            {/* 🪑 Rota de Gerenciamento de Mesas */}
             <Route
                 path="/mesas"
                 element = {
@@ -30,7 +46,7 @@ export default function AppRoutes() {
                 }
             />
 
-            {/* Rota do Monitor de Pedidos (Cozinha e gerenciamento) */}
+            {/* 🍳 Rota do Monitor de Pedidos (Cozinha e gerenciamento) */}
             <Route
                 path="/pedidos"
                 element = {
@@ -40,7 +56,7 @@ export default function AppRoutes() {
                 }
             />
 
-            {/* Rota do Cardápio Digital (Exclusiva para os tablets das Mesas) */}
+            {/* 📱 Rota do Cardápio Digital (Exclusiva para os tablets das Mesas) */}
             <Route
                 path="/cardapio"
                 element = {
@@ -61,7 +77,7 @@ export default function AppRoutes() {
                 }
             />
 
-            {/* Qualquer rota desconhecida ou rota padrão joga o usuário para tentar o Login */}
+            {/* Qualquer rota desconhecida joga o usuário para tentar o Login */}
             <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
     );
