@@ -1,88 +1,161 @@
 import { useState } from "react";
+import { Armchair, Plus, Trash2, CheckCircle, XCircle, Wrench, RefreshCw, Clock } from "lucide-react";
 import { useMesaDados } from "../hooks/useMesaDados";
-import { useMesaDadosMutate } from "../hooks/useMesaDadosMutate";
 import { useMesaMutateStatus } from "../hooks/useMesaMutateStatus";
 import { useMesaDeletar } from "../hooks/useMesaDelete";
+import { useMesaAlterarAtivacao } from "../hooks/useMesaAlterarAtivacao"; // 🌟 Importando o hook de ativação real
+import { FormularioMesa } from "../componentes/FormularioMesa";
+import { ModalAcoesMesa } from "../componentes/ModalAcoesMesa";
+import "../styles/mesasGerente.css";
 
 export default function MesasGerente() {
-    // Consumo dos Hooks de dados e mutações
     const { data: mesas, isLoading, isError } = useMesaDados();
-    const { mutate: cadastrarMesa } = useMesaDadosMutate();
     const { mutate: atualizarStatus } = useMesaMutateStatus();
     const { mutate: deletarMesa } = useMesaDeletar();
+    const { mutate: alterarAtivacao } = useMesaAlterarAtivacao(); // 🌟 Instanciando a mutação
 
-    // Estado local simplificado para controlar o formulário inline
-    const [novoNumero, setNovoNumero] = useState<number | "">("");
+    const [modalMesaAberto, setModalMesaAberto] = useState(false);
+    const [mesaSelecionadaAcoes, setMesaSelecionadaAcoes] = useState<number | null>(null);
 
-    const handleCadastrar = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (novoNumero) {
-            cadastrarMesa({ numero: Number(novoNumero) }, {
-                onSuccess: () => setNovoNumero("") // Limpa o input se cadastrar com sucesso
-            });
-        }
-    };
+    // Ciclo inteligente de alteração manual de status (apenas para mesas ativas)
+    const handleAlternarStatus = (numero: number, statusAtual: 'LIVRE' | 'OCUPADA' | 'MANUTENCAO' | 'RESERVADA') => {
+        let novoStatus: 'LIVRE' | 'OCUPADA' | 'MANUTENCAO' | 'RESERVADA';
 
-    const handleAlternarStatus = (numero: number, statusAtual: 'LIVRE' | 'OCUPADA') => {
-        const novoStatus = statusAtual === 'LIVRE' ? 'OCUPADA' : 'LIVRE';
+        if (statusAtual === 'LIVRE') novoStatus = 'RESERVADA';
+        else if (statusAtual === 'RESERVADA') novoStatus = 'OCUPADA';
+        else if (statusAtual === 'OCUPADA') novoStatus = 'MANUTENCAO';
+        else novoStatus = 'LIVRE';
+
         atualizarStatus({ numero, status: novoStatus });
     };
 
-    const handleDeletar = (numero: number) => {
-        if (window.confirm(`Deseja realmente remover a Mesa ${numero}?`)) {
-            deletarMesa(numero);
-        }
+    // OPÇÃO 1 DO MODAL: Desativação Lógica Real (chama o endpoint PATCH /ativacao)
+    const handleDesativarMesa = (numero: number) => {
+        alterarAtivacao({ numero, ativo: false });
+        setMesaSelecionadaAcoes(null);
     };
 
-    if (isLoading) return <p>⏳ Carregando mapa de mesas...</p>;
-    if (isError) return <p>❌ Erro ao buscar dados das mesas da API.</p>;
+    // Reativação rápida pelo card cinza
+    const handleAtivarMesa = (numero: number) => {
+        alterarAtivacao({ numero, ativo: true });
+    };
+
+    // OPÇÃO 2 DO MODAL: Tenta deletar fisicamente. Se houver FK, o catch faz o fallback automático
+    const handleExcluirDefinitivo = (numero: number) => {
+        setMesaSelecionadaAcoes(null);
+
+        deletarMesa(numero, {
+            onError: (error: any) => {
+                const mensagemErro = error.response?.data?.message || "";
+
+                if (mensagemErro.includes("históricos de pedidos") || error.response?.status === 409 || error.response?.status === 500) {
+                    alert(`⚠️ A Mesa ${numero} possui históricos de pedidos vinculados.\n\nPor segurança, o sistema converteu a ação e a mesa foi apenas DESATIVADA temporariamente.`);
+                    alterarAtivacao({ numero, ativo: false }); // Fallback seguro
+                } else {
+                    alert("❌ Erro inesperado ao tentar excluir a mesa.");
+                }
+            }
+        });
+    };
+
+    if (isLoading) return <div className="status-tela"><p>⏳ Carregando mapa de mesas...</p></div>;
+    if (isError) return <div className="status-tela error"><p>❌ Erro ao conectar com o servidor de mesas.</p></div>;
+
+    const mapeamentoNumeros = mesas ? mesas.map(m => m.numero) : [];
 
     return (
-        <div style={{ padding: "20px" }}>
-            <h2>🪑 Gerenciamento de Mesas do Salão</h2>
+        <div className="gerente-mesas-container animate-fade-in">
+            <div className="topo-painel">
+                <div>
+                    <h2>
+                        <Armchair size={28} style={{ display: 'inline', verticalAlign: 'bottom', marginRight: '8px' }} />
+                        Gerenciamento de Mesas
+                    </h2>
+                    <p>Monitore o status do salão, gerencie reservas ou desative a infraestrutura física.</p>
+                </div>
 
-            {/* Formulário Rápido de Cadastro */}
-            <form onSubmit={handleCadastrar} style={{ marginBottom: "30px" }}>
-                <label>
-                    Número da Mesa:
-                    <input
-                        type="number"
-                        value={novoNumero}
-                        onChange={(e) => setNovoNumero(e.target.value !== "" ? Number(e.target.value) : "")}
-                        min="1"
-                        required
-                    />
-                </label>
-                <button type="submit" style={{ marginLeft: "10px" }}>+ Adicionar Mesa</button>
-            </form>
+                <button className="btn-novo-produto" onClick={() => setModalMesaAberto(true)}>
+                    <Plus size={20} /> Nova Mesa
+                </button>
+            </div>
 
-            {/* Listagem Estrutural das Mesas */}
-            <div style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
+            <div className="grid-mesas">
                 {mesas && mesas.length > 0 ? (
-                    mesas.map((mesa) => (
-                        <div key={mesa.numero} style={{ border: "1px solid #ccc", padding: "15px", borderRadius: "5px", width: "160px" }}>
-                            <h3>Mesa {mesa.numero}</h3>
-                            <p>Status: <strong>{mesa.status}</strong></p>
+                    [...mesas].sort((a, b) => a.numero - b.numero).map((mesa) => {
+                        let classeCard = "mesa-livre";
+                        let componenteBadge = <span className="status-badge livre"><CheckCircle size={14} /> Disponível</span>;
 
-                            <button
-                                onClick={() => handleAlternarStatus(mesa.numero, mesa.status)}
-                                style={{ display: "block", width: "100%", marginBottom: "5px", cursor: "pointer" }}
-                            >
-                                Mudar para {mesa.status === 'LIVRE' ? 'OCUPADA' : 'LIVRE'}
-                            </button>
+                        // 1️⃣ Se a mesa estiver desativada logicamente, ela ganha prioridade estética total
+                        if (!mesa.ativo) {
+                            classeCard = "mesa-desativada";
+                            componenteBadge = <span className="status-badge desativada"><XCircle size={14} /> Desativada</span>;
+                        } else {
+                            // 2️⃣ Se ativa, renderiza seu respectivo estado operacional
+                            if (mesa.status === 'OCUPADA') {
+                                classeCard = "mesa-ocupada";
+                                componenteBadge = <span className="status-badge ocupada"><XCircle size={14} /> Ocupada</span>;
+                            } else if (mesa.status === 'RESERVADA') {
+                                classeCard = "mesa-reservada"; // 🌟 Nova classe
+                                componenteBadge = <span className="status-badge reservada"><Clock size={14} /> Reservada</span>; // 🌟 Novo badge
+                            } else if (mesa.status === 'MANUTENCAO') {
+                                classeCard = "mesa-manutencao";
+                                componenteBadge = <span className="status-badge manutencao"><Wrench size={14} /> Manutenção</span>;
+                            }
+                        }
 
-                            <button
-                                onClick={() => handleDeletar(mesa.numero)}
-                                style={{ display: "block", width: "100%", backgroundColor: "#ffc9c9", color: "red", border: "1px solid red", cursor: "pointer" }}
-                            >
-                                Remover Mesa
-                            </button>
-                        </div>
-                    ))
+                        return (
+                            <div key={mesa.numero} className={`card-mesa ${classeCard}`}>
+                                <div className="card-mesa-header">
+                                    <h3>Mesa {mesa.numero}</h3>
+                                    <button onClick={() => setMesaSelecionadaAcoes(mesa.numero)} className="btn-deletar-mesa" title="Remover ou Desativar">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+
+                                <div className="card-mesa-status-info">
+                                    {componenteBadge}
+                                </div>
+
+                                <div className="card-mesa-acoes">
+                                    {/* 🔄 Se a mesa não estiver ativa, exibe o botão de ativação rápida */}
+                                    {!mesa.ativo ? (
+                                        <button onClick={() => handleAtivarMesa(mesa.numero)} className="btn-ativar-mesa">
+                                            <CheckCircle size={14} /> Ativar Mesa
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => handleAlternarStatus(mesa.numero, mesa.status)} className="btn-alternar-status">
+                                            <RefreshCw size={14} /> Mudar Status
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })
                 ) : (
-                    <p>Nenhuma mesa cadastrada no sistema.</p>
+                    <div className="sem-mesas"><p>Nenhuma mesa cadastrada no sistema da Pizzaria Mauá.</p></div>
                 )}
             </div>
+
+            {/* Modal de Cadastro */}
+            {modalMesaAberto && (
+                <div className="overlay-modal">
+                    <div className="modal-conteudo modal-pequeno" style={{ maxWidth: '500px', textAlign: 'left', padding: '0' }}>
+                        <FormularioMesa
+                            fecharModal={() => setModalMesaAberto(false)}
+                            mesasExistentes={mapeamentoNumeros}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Ações Inteligentes */}
+            <ModalAcoesMesa
+                isOpen={mesaSelecionadaAcoes !== null}
+                onClose={() => setMesaSelecionadaAcoes(null)}
+                numeroMesa={mesaSelecionadaAcoes || 0}
+                onDesativar={() => handleDesativarMesa(mesaSelecionadaAcoes!)}
+                onExcluir={() => handleExcluirDefinitivo(mesaSelecionadaAcoes!)}
+            />
         </div>
     );
 }

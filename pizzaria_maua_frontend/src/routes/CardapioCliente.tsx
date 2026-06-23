@@ -5,12 +5,15 @@ import { usePedidoMesaAberto } from "../hooks/usePedidoMesaAberto";
 import { usePedidoCriar } from "../hooks/usePedidoCriar";
 import { usePedidoAdicionarItens } from "../hooks/usePedidoAdicionarItens";
 import { usePedidoFinalizar } from "../hooks/usePedidoFinalizar";
+import { useMonitorarStatusMesa } from "../hooks/useMonitorarStatusMesa";
 import ModalPagamento from "../componentes/ModalPagamento";
 import ModalAvisoCarrinho from "../componentes/ModalAvisoCarrinho";
 import ModalDetalhesProduto from "../componentes/ModalDetalhesProduto";
 import ListaCardapio from "../componentes/ListaCardapio";
 import PedidoMesa from "../componentes/PedidoMesa";
 import StandByPizzaria from "../pages/StandByPizzaria.tsx";
+import ManutencaoMesa from "../pages/ManutencaoMesa";
+import MesaReservada from "../pages/MesaReservada";
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
 
 import {
@@ -48,17 +51,16 @@ export default function CardapioCliente() {
     const [isModalAvisoOpen, setIsModalAvisoOpen] = useState<boolean>(false);
     const [isStandBy, setIsStandBy] = useState<boolean>(false);
 
-    // Controle interno para o fluxo de finalização do pagamento
     const [pagamentoSolicitado, setPagamentoSolicitado] = useState<boolean>(false);
 
     const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
     const { data: pedidoAtivo, isLoading: loadingPedido } = usePedidoMesaAberto(numeroMesa);
+    const { data: mesaStatusData } = useMonitorarStatusMesa(numeroMesa > 0 ? numeroMesa : undefined);
 
     const { mutate: criarNovoPedido, isPending: criando } = usePedidoCriar();
     const { mutate: adicionarItensAoPedido, isPending: adicionando } = usePedidoAdicionarItens();
     const { mutate: finalizarPedido } = usePedidoFinalizar();
 
-    // MONITOR DE INATIVIDADE (1 Minuto)
     useEffect(() => {
         if (isStandBy) return;
 
@@ -91,11 +93,10 @@ export default function CardapioCliente() {
                     item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item
                 );
             }
-            return [...carrinhoAtual, { produto, quantidade: 1 }];
+            return [...carrinhoAtual, { produto, grandmother: 1, quantidade: 1 }];
         });
     };
 
-    // CORRIGIDO: Removidas as referências incorretas a 'whitespace'
     const handleRemoverOuDiminuir = (produtoId: number) => {
         setCarrinho((carrinhoAtual) => {
             const item = carrinhoAtual.find(i => i.produto.id === produtoId);
@@ -192,6 +193,15 @@ export default function CardapioCliente() {
 
     const produtosCardapio = produtos?.filter(p => p.ativo) || [];
 
+    // CORREÇÃO: Se a mesa estiver explicitamente desativada no banco (ativo == false) OU com status MANUTENCAO, bloqueia o fluxo imediatamente
+    if (mesaStatusData?.status === "MANUTENCAO" || mesaStatusData?.ativo === false) {
+        return <ManutencaoMesa />;
+    }
+
+    if (mesaStatusData?.status === "RESERVADA") {
+        return <MesaReservada />;
+    }
+
     if (isStandBy) {
         return <StandByPizzaria onToque={() => setIsStandBy(false)} />;
     }
@@ -217,8 +227,6 @@ export default function CardapioCliente() {
 
     return (
         <div className="cardapio-container">
-
-            {/* SEÇÃO ESQUERDA: LISTA DE PRODUTOS */}
             <div className="coluna-cardapio">
                 <div className="cardapio-header">
                     <h2 className="cardapio-title">
@@ -233,7 +241,6 @@ export default function CardapioCliente() {
                 />
             </div>
 
-            {/* SEÇÃO DIREITA: BARRA LATERAL */}
             <div className="coluna-pedido">
                 <PedidoMesa
                     carrinho={carrinho}
@@ -250,14 +257,12 @@ export default function CardapioCliente() {
                 />
             </div>
 
-            {/* MODAL PADRÃO DE PAGAMENTO */}
             <ModalPagamento
                 isOpen={isModalOpen}
                 onClose={handleFechamentoModal}
                 onSolicitarPagamento={handleEnviarSolicitacaoPagamento}
             />
 
-            {/* NOVO MODAL DE SEGURANÇA E DE ALERTA DO CARRINHO */}
             <ModalAvisoCarrinho
                 isOpen={isModalAvisoOpen}
                 onClose={() => setIsModalAvisoOpen(false)}

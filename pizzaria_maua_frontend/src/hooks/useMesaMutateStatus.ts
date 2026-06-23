@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface AlterarStatusProps {
     numero: number;
-    status: 'LIVRE' | 'OCUPADA';
+    status: 'LIVRE' | 'OCUPADA' | 'MANUTENCAO' | 'RESERVADA';
 }
 
 async function atualizarStatusMesa({ numero, status }: AlterarStatusProps) {

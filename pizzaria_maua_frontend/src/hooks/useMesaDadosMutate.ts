@@ -1,8 +1,17 @@
 import api from "../services/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-async function salvarMesa(mesa: { numero: number }) {
-    const response = await api.post('/mesas', mesa);
+// Definindo a interface para refletir o novo fluxo
+interface CriarMesaComUsuarioPayload {
+    numero: number;
+    criarUsuario: boolean;
+    username?: string;
+    password?: string;
+}
+
+async function salvarMesa(payload: CriarMesaComUsuarioPayload) {
+    // Envia o JSON completo para o endpoint POST /mesas do Spring Boot
+    const response = await api.post('/mesas', payload);
     return response.data;
 }
 
