@@ -8,7 +8,6 @@ interface ModalDetalhesProdutoProps {
     onClose: () => void;
 }
 
-// 👈 CORREÇÃO: Alinhado perfeitamente com o DetalhesDescricaoDTO do Spring Boot
 interface DescricaoEstruturada {
     breveDescricao: string;
     tempoMedioPreparo: string;
@@ -19,7 +18,6 @@ interface DescricaoEstruturada {
 export default function ModalDetalhesProduto({ produto, onClose }: ModalDetalhesProdutoProps) {
     if (!produto) return null;
 
-    // 👈 CORREÇÃO: Mapeamento direto sem necessidade de JSON.parse()
     const detalhes = produto.descricao as unknown as DescricaoEstruturada | undefined;
     const ehVegano = detalhes?.pratoVegano === true;
 
@@ -86,7 +84,7 @@ export default function ModalDetalhesProduto({ produto, onClose }: ModalDetalhes
                     )}
 
                     {/* Botão de Rodapé para fechamento e retorno ao Menu */}
-                    <button className="btn btn-secondary" style={{ width: "100%", padding: "12px", borderRadius: "8px" }} onClick={onClose}>
+                    <button className="btn btn-secondary" style={{ width: "100%", padding: "12px", borderRadius: "8px", backgroundColor: "#dc2626", color: "white" }} onClick={onClose}>
                         Voltar ao Menu
                     </button>
                 </div>

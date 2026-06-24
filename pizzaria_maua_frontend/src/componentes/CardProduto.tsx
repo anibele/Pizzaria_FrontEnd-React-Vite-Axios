@@ -1,5 +1,7 @@
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
-import { Eye, Plus, Leaf } from "lucide-react";
+import { Search, Plus, Leaf } from "lucide-react";
+
+import "../styles/cardProduto.css";
 
 interface CardProdutoProps {
     produto: ProdutoDados;
@@ -7,16 +9,24 @@ interface CardProdutoProps {
     onAdicionar: (produto: ProdutoDados) => void;
 }
 
-export default function CardProduto({ produto, onVerDetalhes, onAdicionar }: CardProdutoProps) {
-    // Identifica se o produto atual pertence à categoria de bebidas
-    const ehBebida = produto.categoria?.toUpperCase() === "BEBIDAS";
+export default function CardProduto({
+                                        produto,
+                                        onVerDetalhes,
+                                        onAdicionar,
+                                    }: CardProdutoProps) {
 
-    // 👈 CORREÇÃO: Agora lemos diretamente a propriedade booleana do objeto mapeado
-    const ehVegano = !ehBebida && produto.descricao?.pratoVegano === true;
+    const ehBebida =
+        produto.categoria?.toUpperCase() === "BEBIDAS";
+
+    const ehVegano =
+        !ehBebida &&
+        produto.descricao?.pratoVegano === true;
 
     return (
-        <div className="card-produto">
-            {/* Tag/Adesivo visual para identificação de receitas veganas */}
+        <div
+            className="card-produto"
+            onClick={() => onVerDetalhes(produto)}
+        >
             {ehVegano && (
                 <div className="badge-vegano-tag">
                     <Leaf size={12} />
@@ -24,23 +34,48 @@ export default function CardProduto({ produto, onVerDetalhes, onAdicionar }: Car
                 </div>
             )}
 
-            <img src={produto.imagemUrl} alt={produto.nome} className="produto-imagem" />
-            <h3 className="produto-nome">{produto.nome}</h3>
-            <p className="produto-preco">R$ {produto.precoBase.toFixed(2)}</p>
+            <img
+                src={produto.imagemUrl}
+                alt={produto.nome}
+                className="produto-imagem"
+            />
 
-            <div className="card-actions">
+            <div className="produto-info">
+
+                <h3 className="produto-nome">
+                    {produto.nome}
+                </h3>
+
                 <button
-                    onClick={() => onVerDetalhes(produto)}
-                    className="btn btn-secondary"
+                    className="btn-detalhes"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onVerDetalhes(produto);
+                    }}
                 >
-                    <Eye size={16} /> Ver Detalhes
+                    <Search size={15} />
+                    <span>Toque para ver detalhes</span>
                 </button>
+
+            </div>
+
+            <div className="produto-footer">
+
+                <div className="produto-preco">
+                    R$ {produto.precoBase.toFixed(2)}
+                </div>
+
                 <button
-                    onClick={() => onAdicionar(produto)}
                     className="btn btn-accent"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onAdicionar(produto);
+                    }}
                 >
-                    <Plus size={16} /> Adicionar ao Pedido
+                    <Plus size={18} />
+                    <span>Adicionar</span>
                 </button>
+
             </div>
         </div>
     );

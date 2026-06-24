@@ -45,12 +45,12 @@
 }
 
 .notif-card.pagamento {
-    border-left-color: #fbc02d; /* Dourado/Amarelo Caixa */
+    border-left-color: #3e9802; /* Pagamento */
     background: linear-gradient(to right, #fffdf2, #ffffff);
 }
 .notif-card.pagamento .notif-icon-wrapper {
     background-color: #fffde7;
-    color: #f57f17;
+    color: #3e9802;
 }
 
 /* Wrapper do Ícone Redondo */
@@ -125,7 +125,7 @@
 /* Injeção de Cor na Barra Baseada na classe pai */
 .notif-card.novo_pedido .notif-progress-bar { background-color: #e53935; }
 .notif-card.itens_adicionados .notif-progress-bar { background-color: #1e88e5; }
-.notif-card.pagamento .notif-progress-bar { background-color: #fbc02d; }
+.notif-card.pagamento .notif-progress-bar { background-color: #3e9802; }
 
 /* --- ANIMAÇÕES --- */
 

@@ -16,5 +16,6 @@ export function usePedidoMesaAberto(numeroMesa: number) {
         queryKey: ["pedido-mesa-aberto", numeroMesa],
         queryFn: () => buscarPedidoMesa(numeroMesa),
         enabled: numeroMesa > 0,
+        refetchInterval: 1000
     });
 }

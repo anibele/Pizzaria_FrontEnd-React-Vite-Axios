@@ -11,7 +11,7 @@ export function useMonitorarStatusMesa(numeroMesa: number | undefined) {
         queryKey: ["status-tablet-mesa", numeroMesa],
         queryFn: () => buscarStatusAtual(numeroMesa!),
         enabled: !!numeroMesa, // Só executa se soubermos o número da mesa
-        refetchInterval: 5000, // ⏱️ Consulta o Spring Boot a cada 5 segundos
+        refetchInterval: 1000,
         refetchIntervalInBackground: true // Continua checando mesmo se a tela escurecer
     });
 }

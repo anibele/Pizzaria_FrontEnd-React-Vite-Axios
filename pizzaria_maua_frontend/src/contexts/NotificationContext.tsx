@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Bell, PlusCircle, DollarSign, X } from "lucide-react";
-import "../styles/notification.css"; // Vamos criar este arquivo a seguir
+import "../styles/notification.css";
 
 export type NotificationType = "NOVO_PEDIDO" | "ITENS_ADICIONADOS" | "PAGAMENTO";
 
@@ -54,11 +54,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 message = `Mesa ${mesa} acabou de abrir um pedido.`;
                 break;
             case "ITENS_ADICIONADOS":
-                title = "Mais Itens!";
+                title = "Mais Itens no pedido!";
                 message = `Mesa ${mesa} adicionou novos itens ao pedido.`;
                 break;
             case "PAGAMENTO":
-                title = "Solicitação de Pago!";
+                title = "Solicitação de Pagamento!";
                 message = `Mesa ${mesa} solicitou fechamento via ${detalhes || "Cartão"}.`;
                 break;
         }

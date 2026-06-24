@@ -1,8 +1,10 @@
 import axios from 'axios';
 import type { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
+const backendIp = import.meta.env.VITE_BACKEND_IP;
+
 const api = axios.create({
-    baseURL: 'http://localhost:8080'
+    baseURL: `http://${backendIp}:8080`
 });
 
 // Interceptor de Requisição: Injeta o token JWT em cada chamada ao Spring Boot

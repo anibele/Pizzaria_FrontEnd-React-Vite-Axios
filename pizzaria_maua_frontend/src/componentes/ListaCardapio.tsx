@@ -1,6 +1,16 @@
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
 import CardProduto from "./CardProduto";
-import "../styles/listaCardapio.css"; // Importando o novo arquivo de estilos
+
+import {
+    Pizza,
+    IceCreamBowl,
+    UtensilsCrossed,
+    CakeSlice,
+    CupSoda,
+    Wine,
+} from "lucide-react";
+
+import "../styles/listaCardapio.css";
 
 interface ListaCardapioProps {
     produtos: ProdutoDados[];
@@ -40,24 +50,52 @@ export default function ListaCardapio({ produtos, onVerDetalhes, onAdicionar }: 
 
     // Estrutura mapeada das seções
     const secoes = [
-        { titulo: "🍕 Pizzas Salgadas", itens: pizzasSalgadas },
-        { titulo: "🍫 Pizzas Doces", itens: pizzasDoces },
-        { titulo: "🍟 Acompanhamentos", itens: acompanhamentos },
-        { titulo: "🍰 Sobremesas", itens: sobremesas },
-        { titulo: "🥤 Bebidas", itens: bebidas },
-        { titulo: "🍺 Bebidas Alcoólicas", itens: bebidasAlcoolicas },
+        {
+            titulo: "Pizzas Salgadas",
+            icone: Pizza,
+            itens: pizzasSalgadas,
+        },
+        {
+            titulo: "Pizzas Doces",
+            icone: IceCreamBowl,
+            itens: pizzasDoces,
+        },
+        {
+            titulo: "Acompanhamentos",
+            icone: UtensilsCrossed,
+            itens: acompanhamentos,
+        },
+        {
+            titulo: "Sobremesas",
+            icone: CakeSlice,
+            itens: sobremesas,
+        },
+        {
+            titulo: "Bebidas",
+            icone: CupSoda,
+            itens: bebidas,
+        },
+        {
+            titulo: "Bebidas Alcoólicas",
+            icone: Wine,
+            itens: bebidasAlcoolicas,
+        },
     ];
 
     return (
         <div className="lista-cardapio-container">
             {secoes.map((secao, index) => {
                 if (secao.itens.length === 0) return null;
+                const Icone = secao.icone;
 
                 return (
                     <section key={index} className="secao-cardapio">
                         {/* Título da Categoria sem o contador de itens */}
                         <div className="secao-header">
-                            <h2 className="secao-titulo">{secao.titulo}</h2>
+                            <h2 className="secao-titulo">
+                                <Icone size={26} strokeWidth={2.2} />
+                                <span>{secao.titulo}</span>
+                            </h2>
                         </div>
 
                         {/* Grid contendo os Cards */}

@@ -2,7 +2,7 @@ import { useLocation } from "react-router-dom";
 import { useContext } from "react";
 import AppRoutes from "./routes";
 import NavBar from "./componentes/NavBar";
-import MenuGerente from "./componentes/MenuGerente"; // 👈 Importamos o novo menu
+import MenuGerente from "./componentes/MenuGerente";
 import { AuthContext } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import "./App.css";

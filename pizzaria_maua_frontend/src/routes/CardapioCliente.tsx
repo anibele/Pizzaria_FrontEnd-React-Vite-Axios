@@ -17,7 +17,6 @@ import MesaReservada from "../pages/MesaReservada";
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
 
 import {
-    UtensilsCrossed,
     AlertCircle,
     Loader2
 } from "lucide-react";
@@ -70,7 +69,7 @@ export default function CardapioCliente() {
             clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(() => {
                 setIsStandBy(true);
-            }, 60 * 1000);
+            }, 3 * 60 * 1000); // 3 minutos de inatividade
         };
 
         const eventosInteracao = ["mousemove", "mousedown", "touchstart", "click", "scroll"];
@@ -228,11 +227,6 @@ export default function CardapioCliente() {
     return (
         <div className="cardapio-container">
             <div className="coluna-cardapio">
-                <div className="cardapio-header">
-                    <h2 className="cardapio-title">
-                        <UtensilsCrossed color="#e53935" /> Cardápio Digital - Faça seus pedidos aqui!
-                    </h2>
-                </div>
 
                 <ListaCardapio
                     produtos={produtosCardapio}

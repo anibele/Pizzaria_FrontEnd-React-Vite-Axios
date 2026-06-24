@@ -29,8 +29,6 @@
     max-width: 1500px; /* Trava o crescimento excessivo em TVs/Monitores ultrawide */
     margin: 0 auto; /* Centraliza o cardápio na tela */
 
-    /* Foi removido o align-items: flex-start daqui para que a coluna lateral atinja
-       a mesma altura das pizzas e permita a comanda "deslizar" até o fim! */
 }
 
 .coluna-cardapio {
@@ -44,19 +42,6 @@
     flex-shrink: 0;
     /* IMPORTANTE: Sem background, padding ou sticky aqui.
        O seu arquivo PedidoMesa é que cuida do visual do card! */
-}
-
-.cardapio-header {
-    margin-bottom: 24px;
-}
-
-.cardapio-title {
-    font-size: 1.8rem;
-    color: var(--bg-dark);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 0;
 }
 
 /* COORDENAÇÃO DOS CARDS DE PRODUTO */
