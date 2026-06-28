@@ -5,6 +5,7 @@ import NavBar from "./componentes/NavBar";
 import MenuGerente from "./componentes/MenuGerente";
 import { AuthContext } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import MenuCaixa from "./componentes/MenuCaixa";
 import "./App.css";
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
 
     const isAmbienteCozinha = user?.role === "COZINHA" || location.pathname === "/pedidos";
     const isGerente = user?.role === "GERENTE";
+    const isCaixa = user?.role === "CAIXA";
 
     return (
         <NotificationProvider>
@@ -23,7 +25,10 @@ export default function App() {
                 {/* 2. Menu Exclusivo do Gerente (Elegante e componentizado) */}
                 {authenticated && isGerente && !isAmbienteCozinha && <MenuGerente />}
 
-                {/* 3. Renderização da tela */}
+                {/* 3. Menu do caixa */}
+                {authenticated && isCaixa && !isAmbienteCozinha && <MenuCaixa />}
+
+                {/* 4. Renderização da tela */}
                 <main className="conteudo-principal" style={{ padding: isAmbienteCozinha ? "0" : "0 20px" }}>
                     <AppRoutes />
                 </main>

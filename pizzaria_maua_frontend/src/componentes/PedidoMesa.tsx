@@ -59,7 +59,7 @@ export default function PedidoMesa({
     const totalGeralConta = totalConsumado + totalPedido;
 
     return (
-        <div className="sticky-pedido-wrapper">
+        <div className="sticky-pedido-wrapper" data-tour="step-3">
             <h3 className="pedido-titulo">
                 <ClipboardList size={20} color="#e53935" /> Comanda atual
             </h3>
@@ -111,7 +111,7 @@ export default function PedidoMesa({
                         onClick={onEnviarParaCozinha}
                         disabled={criando || adicionando}
                         className="btn btn-primary"
-                    >
+                        data-tour="step-4">
                         {criando || adicionando ? (
                             <><Loader2 className="animate-spin" size={18} /> Enviando...</>
                         ) : (

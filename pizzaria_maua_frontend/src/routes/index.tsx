@@ -6,6 +6,7 @@ import ProdutosGerente from "./ProdutosGerente";
 import MesasGerente from "./MesasGerente";
 import PedidosCozinha from "./PedidosCozinha";
 import CardapioCliente from "./CardapioCliente";
+import DashboardCaixa from "../pages/DashboardCaixa";
 
 export default function AppRoutes() {
     return (
@@ -55,6 +56,15 @@ export default function AppRoutes() {
                     </ProtectedRoute>
                 }
             />
+            {/* 💰 Rota do Caixa */}
+            <Route
+                path="/caixa"
+                element = {
+                    <ProtectedRoute allowedRoles={["CAIXA", "GERENTE"]}>
+                        <DashboardCaixa />
+                    </ProtectedRoute>
+                }
+            />
 
             {/* 📱 Rota do Cardápio Digital (Exclusiva para os tablets das Mesas) */}
             <Route
@@ -65,6 +75,7 @@ export default function AppRoutes() {
                     </ProtectedRoute>
                 }
             />
+
 
             {/* Feedback visual para tentativas de acessos indevidos */}
             <Route

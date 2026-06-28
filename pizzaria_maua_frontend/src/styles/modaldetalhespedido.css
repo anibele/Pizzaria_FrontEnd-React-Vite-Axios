@@ -1,0 +1,166 @@
+/* Fundo escuro com desfoque suave */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Container principal do modal */
+.modal-container {
+    background-color: #ffffff;
+    width: 90%;
+    max-width: 420px;
+    max-height: 85vh;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+/* Cabeçalho */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-bottom: 2px dashed #e5e7eb; /* Borda tracejada estilo cupom */
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #1f2937;
+}
+
+.btn-fechar {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.btn-fechar:hover {
+    background-color: #e5e7eb;
+    color: #ef4444;
+}
+
+/* Corpo - Lista de Itens */
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.lista-itens {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.item-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    color: #374151;
+}
+
+.item-qtd-nome {
+    display: flex;
+    gap: 8px;
+}
+
+.item-qtd {
+    font-weight: 700;
+    color: #4b5563;
+}
+
+.item-preco {
+    font-weight: 600;
+}
+
+/* Rodapé - Total e Botão */
+.modal-footer {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-top: 2px dashed #e5e7eb;
+}
+
+.linha-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.linha-total span:first-child {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.valor-total {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #16a34a; /* Verde sucesso */
+}
+
+.btn-imprimir {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    background-color: #2563eb;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-imprimir:hover {
+    background-color: #1d4ed8;
+}
+
+.btn-imprimir:active {
+    transform: scale(0.98);
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

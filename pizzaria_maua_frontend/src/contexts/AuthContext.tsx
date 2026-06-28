@@ -5,13 +5,13 @@ import api from '../services/api';
 // Tipagem do usuário do sistema
 export interface User {
     username: string;
-    role: 'MESA' | 'COZINHA' | 'GERENTE';
+    role: 'MESA' | 'COZINHA' | 'GERENTE' | 'CAIXA';
 }
 
 // Resposta esperada do endpoint do Spring Boot
 interface LoginResponse {
     token: string;
-    role: 'MESA' | 'COZINHA' | 'GERENTE';
+    role: 'MESA' | 'COZINHA' | 'GERENTE' | 'CAIXA';
 }
 
 interface AuthContextType {
@@ -22,6 +22,7 @@ interface AuthContextType {
     loading: boolean;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -34,7 +35,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedUser = localStorage.getItem('user');
 
         if (storedToken && storedUser) {
-            setUser(JSON.parse(storedUser));
+            try {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Erro ao ler usuário do localStorage, limpando...", e);
+                localStorage.clear();
+            }
         }
         setLoading(false);
     }, []);
@@ -56,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 navigate('/pedidos'); // Vai direto para a tela de pedidos
             } else if (role === 'GERENTE') {
                 navigate('/');        // Vai direto para a tela de produtos
+            } else if (role === 'CAIXA') {
+                navigate('/caixa');   // Vai direto para a tela do caixa
             }
 
         } catch (error) {

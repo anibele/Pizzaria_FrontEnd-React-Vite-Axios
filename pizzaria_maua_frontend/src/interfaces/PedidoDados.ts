@@ -10,10 +10,11 @@ export interface ItemPedidoDados {
 export interface PedidoDados {
     id: number;
     mesa: MesaDados;
-    dataHora: string; // Vem como ISO string do LocalDateTime do Java
-    status: 'ABERTO' | 'FINALIZADO';
+    dataHora: string;
+    status: 'ABERTO' | 'FINALIZADO' | 'AGUARDANDO_PAGAMENTO';
     itens: ItemPedidoDados[];
     formaPagamento: string;
+    faturamento?: number;
 }
 
 export interface CriarPedidoInput {

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Pizza, Armchair, ChefHat } from "lucide-react";
+import {LayoutDashboard, Pizza, Armchair, ChefHat, DollarSign} from "lucide-react";
 import "../styles/menuGerente.css";
 
 export default function MenuGerente() {
@@ -10,6 +10,7 @@ export default function MenuGerente() {
         { path: "/produtos", label: "Cardápio", icon: Pizza },
         { path: "/mesas", label: "Mesas", icon: Armchair },
         { path: "/pedidos", label: "Cozinha", icon: ChefHat },
+        { path: "/caixa", label: "Caixa", icon: DollarSign },
     ];
 
     return (

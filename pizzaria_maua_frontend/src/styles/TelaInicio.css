@@ -1,4 +1,4 @@
-.standby-fullscreen-container {
+.tela-inicio-fullscreen-container {
     position: fixed;
     top: 0;
     left: 0;
@@ -11,7 +11,7 @@
     user-select: none;
 }
 
-.standby-imagem {
+.tela-inicio-imagem {
     width: 100%;
     height: 100%;
     object-fit: cover;

@@ -15,12 +15,15 @@ import StandByPizzaria from "../pages/StandByPizzaria.tsx";
 import ManutencaoMesa from "../pages/ManutencaoMesa";
 import MesaReservada from "../pages/MesaReservada";
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
-
+import { OnboardingProvider } from "../contexts/OnboardingContext";
+import { useOnboarding } from "../hooks/useOnboarding";
+import { WelcomeModal } from "../componentes/onboarding/WelcomeModal";
+import { TutorialOverlay } from "../componentes/onboarding/TutorialOverlay";
+import TelaInicio from "../pages/TelaInicio";
 import {
     AlertCircle,
     Loader2
 } from "lucide-react";
-
 import "../styles/cardapio.css";
 
 interface ItemCarrinho {
@@ -38,51 +41,140 @@ interface ItemPedidoResponse {
 }
 
 export default function CardapioCliente() {
+    const [isStandBy, setIsStandBy] = useState<boolean>(false);
+    const [clienteIniciouSessao, setClienteIniciouSessao] = useState<boolean>(false);
+
     const { user } = useContext(AuthContext);
 
     const numeroMesa = user && user.username
         ? Number(user.username.replace(/\D/g, ""))
         : 0;
 
-    const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
+    const { data: mesaStatusData } = useMonitorarStatusMesa(numeroMesa > 0 ? numeroMesa : undefined);
+
+    useEffect(() => {
+        if (mesaStatusData?.status === "LIVRE") {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setIsStandBy(false);
+            setClienteIniciouSessao(false);
+        }
+    }, [mesaStatusData?.status]);
+
+    const determinarStatusOnboarding = () => {
+        if (isStandBy) return "STANDBY";
+
+        // Se a mesa tá LIVRE no banco, mas o cliente acabou de tocar na tela,
+        // fingimos que está "OCUPADA" para o Contexto disparar o Tutorial
+        if (mesaStatusData?.status === "LIVRE" && clienteIniciouSessao) {
+            return "OCUPADA";
+        }
+
+        return mesaStatusData?.status || "OCUPADA";
+    };
+
+    return (
+        <OnboardingProvider statusMesa={determinarStatusOnboarding()}>
+            <CardapioConteudo
+                isStandBy={isStandBy}
+                setIsStandBy={setIsStandBy}
+                clienteIniciouSessao={clienteIniciouSessao}
+                setClienteIniciouSessao={setClienteIniciouSessao}
+                mesaStatusData={mesaStatusData}
+                numeroMesa={numeroMesa}
+            />
+        </OnboardingProvider>
+    );
+}
+
+interface CardapioConteudoProps {
+    isStandBy: boolean;
+    setIsStandBy: (v: boolean) => void;
+    clienteIniciouSessao: boolean;
+    setClienteIniciouSessao: (v: boolean) => void;
+    mesaStatusData: any;
+    numeroMesa: number;
+}
+
+function CardapioConteudo({
+                              isStandBy, setIsStandBy,
+                              clienteIniciouSessao, setClienteIniciouSessao,
+                              mesaStatusData, numeroMesa
+                          }: CardapioConteudoProps) {
+    const { status } = useOnboarding();
+
+    const [carrinho, setCarrinho] = useState<ItemCarrinho[]>(() => {
+        try {
+            const carrinhoSalvo = localStorage.getItem(`carrinho_mesa_${numeroMesa}`);
+            return carrinhoSalvo ? JSON.parse(carrinhoSalvo) : [];
+        } catch {
+            return [];
+        }
+    });
+
     const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoDados | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isModalAvisoOpen, setIsModalAvisoOpen] = useState<boolean>(false);
-    const [isStandBy, setIsStandBy] = useState<boolean>(false);
-
     const [pagamentoSolicitado, setPagamentoSolicitado] = useState<boolean>(false);
 
     const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
-    const { data: pedidoAtivo, isLoading: loadingPedido } = usePedidoMesaAberto(numeroMesa);
-    const { data: mesaStatusData } = useMonitorarStatusMesa(numeroMesa > 0 ? numeroMesa : undefined);
-
+    const { data: pedidoAtivo, isLoading: loadingPedido, refetch: refetchPedido } = usePedidoMesaAberto(numeroMesa);
     const { mutate: criarNovoPedido, isPending: criando } = usePedidoCriar();
     const { mutate: adicionarItensAoPedido, isPending: adicionando } = usePedidoAdicionarItens();
     const { mutate: finalizarPedido } = usePedidoFinalizar();
 
     useEffect(() => {
-        if (isStandBy) return;
+        if (numeroMesa > 0) {
+            const carrinhoFiltrado = carrinho.filter(item => item.produto.id !== 9999);
+            localStorage.setItem(`carrinho_mesa_${numeroMesa}`, JSON.stringify(carrinhoFiltrado));
+        }
+    }, [carrinho, numeroMesa]);
 
+    useEffect(() => {
+        if (status === "TUTORIAL" && produtos && produtos.length > 0) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setCarrinho(carrinhoAtual => {
+                if (carrinhoAtual.some(item => item.produto.id === 9999)) return carrinhoAtual;
+                const produtoBase = produtos.find(p => p.ativo) || produtos[0];
+                const produtoDemonstracao: ProdutoDados = { ...produtoBase, id: 9999 };
+                return [...carrinhoAtual, { produto: produtoDemonstracao, quantidade: 1 }];
+            });
+        } else {
+            setCarrinho(carrinhoAtual => {
+                if (carrinhoAtual.some(item => item.produto.id === 9999)) {
+                    return carrinhoAtual.filter(item => item.produto.id !== 9999);
+                }
+                return carrinhoAtual;
+            });
+        }
+    }, [status, produtos]);
+
+    useEffect(() => {
+        if (isStandBy || (mesaStatusData?.status === "LIVRE" && !clienteIniciouSessao)) return;
         let inactivityTimer: ReturnType<typeof setTimeout>;
 
         const resetarCronometro = () => {
             clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(() => {
                 setIsStandBy(true);
-            }, 3 * 60 * 1000); // 3 minutos de inatividade
+            }, 3 * 60 * 1000);
         };
 
         const eventosInteracao = ["mousemove", "mousedown", "touchstart", "click", "scroll"];
-
         resetarCronometro();
-
         eventosInteracao.forEach(evento => window.addEventListener(evento, resetarCronometro));
 
         return () => {
             clearTimeout(inactivityTimer);
             eventosInteracao.forEach(evento => window.removeEventListener(evento, resetarCronometro));
         };
-    }, [isStandBy]);
+    }, [isStandBy, setIsStandBy, mesaStatusData?.status, clienteIniciouSessao]);
+
+    useEffect(() => {
+        if (mesaStatusData?.status === "LIVRE") {
+            setClienteIniciouSessao(false);
+            setIsStandBy(false);
+        }
+    }, [mesaStatusData?.status, setClienteIniciouSessao, setIsStandBy]);
 
     const handleAdicionarAoCarrinho = (produto: ProdutoDados) => {
         setCarrinho((carrinhoAtual) => {
@@ -92,7 +184,7 @@ export default function CardapioCliente() {
                     item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item
                 );
             }
-            return [...carrinhoAtual, { produto, grandmother: 1, quantidade: 1 }];
+            return [...carrinhoAtual, { produto, quantidade: 1 }];
         });
     };
 
@@ -172,7 +264,6 @@ export default function CardapioCliente() {
     const handleEnviarSolicitacaoPagamento = (formaPagamentoSelecionada: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
         if (pedidoAtivo) {
             setPagamentoSolicitado(true);
-
             finalizarPedido({
                 pedidoId: pedidoAtivo.id,
                 numeroMesa: numeroMesa,
@@ -183,22 +274,29 @@ export default function CardapioCliente() {
 
     const handleFechamentoModal = () => {
         setIsModalOpen(false);
-
         if (pagamentoSolicitado) {
-            setIsStandBy(true);
+            setClienteIniciouSessao(true);
             setPagamentoSolicitado(false);
         }
     };
 
     const produtosCardapio = produtos?.filter(p => p.ativo) || [];
 
-    // CORREÇÃO: Se a mesa estiver explicitamente desativada no banco (ativo == false) OU com status MANUTENCAO, bloqueia o fluxo imediatamente
     if (mesaStatusData?.status === "MANUTENCAO" || mesaStatusData?.ativo === false) {
         return <ManutencaoMesa />;
     }
 
     if (mesaStatusData?.status === "RESERVADA") {
         return <MesaReservada />;
+    }
+
+    if (mesaStatusData?.status === "LIVRE" && !clienteIniciouSessao) {
+        return (
+            <TelaInicio onIniciar={() => {
+                setClienteIniciouSessao(true);
+                refetchPedido();
+            }} />
+        );
     }
 
     if (isStandBy) {
@@ -219,54 +317,58 @@ export default function CardapioCliente() {
             <div className="error-card">
                 <AlertCircle size={48} color="#d32f2f" style={{ marginBottom: '16px' }} />
                 <h2>Não foi possível carregar o cardápio</h2>
-                <p>O tablet falhou ao tentar buscar os produtos ativos. Verifique as regras do Back-end.</p>
+                <p>O tablet falhou ao tentar buscar os produtos ativos.</p>
             </div>
         );
     }
 
     return (
-        <div className="cardapio-container">
-            <div className="coluna-cardapio">
+        <>
+            <WelcomeModal />
+            <TutorialOverlay />
 
-                <ListaCardapio
-                    produtos={produtosCardapio}
-                    onVerDetalhes={setProdutoSelecionado}
-                    onAdicionar={handleAdicionarAoCarrinho}
+            <div className="cardapio-container">
+                <div className="coluna-cardapio">
+                    <ListaCardapio
+                        produtos={produtosCardapio}
+                        onVerDetalhes={setProdutoSelecionado}
+                        onAdicionar={handleAdicionarAoCarrinho}
+                    />
+                </div>
+
+                <div className="coluna-pedido">
+                    <PedidoMesa
+                        carrinho={carrinho}
+                        onRemoverOuDiminuir={handleRemoverOuDiminuir}
+                        onAdicionarAoCarrinho={handleAdicionarAoCarrinho}
+                        onEnviarParaCozinha={handleEnviarParaCozinha}
+                        criando={criando}
+                        adicionando={adicionando}
+                        pedidoAtivo={pedidoAtivo}
+                        itensConsumidos={itensConsumidos}
+                        possuiItensConsumidos={possuiItensConsumidos}
+                        todosItensProntos={todosItensProntos}
+                        onAbrirPagamento={handleSolicitarPagamento}
+                    />
+                </div>
+
+                <ModalPagamento
+                    isOpen={isModalOpen}
+                    onClose={handleFechamentoModal}
+                    onSolicitarPagamento={handleEnviarSolicitacaoPagamento}
+                />
+
+                <ModalAvisoCarrinho
+                    isOpen={isModalAvisoOpen}
+                    onClose={() => setIsModalAvisoOpen(false)}
+                    onConfirmarPagamento={handleDescartarEPagar}
+                />
+
+                <ModalDetalhesProduto
+                    produto={produtoSelecionado}
+                    onClose={() => setProdutoSelecionado(null)}
                 />
             </div>
-
-            <div className="coluna-pedido">
-                <PedidoMesa
-                    carrinho={carrinho}
-                    onRemoverOuDiminuir={handleRemoverOuDiminuir}
-                    onAdicionarAoCarrinho={handleAdicionarAoCarrinho}
-                    onEnviarParaCozinha={handleEnviarParaCozinha}
-                    criando={criando}
-                    adicionando={adicionando}
-                    pedidoAtivo={pedidoAtivo}
-                    itensConsumidos={itensConsumidos}
-                    possuiItensConsumidos={possuiItensConsumidos}
-                    todosItensProntos={todosItensProntos}
-                    onAbrirPagamento={handleSolicitarPagamento}
-                />
-            </div>
-
-            <ModalPagamento
-                isOpen={isModalOpen}
-                onClose={handleFechamentoModal}
-                onSolicitarPagamento={handleEnviarSolicitacaoPagamento}
-            />
-
-            <ModalAvisoCarrinho
-                isOpen={isModalAvisoOpen}
-                onClose={() => setIsModalAvisoOpen(false)}
-                onConfirmarPagamento={handleDescartarEPagar}
-            />
-
-            <ModalDetalhesProduto
-                produto={produtoSelecionado}
-                onClose={() => setProdutoSelecionado(null)}
-            />
-        </div>
+        </>
     );
 }

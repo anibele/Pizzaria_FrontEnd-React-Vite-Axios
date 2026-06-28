@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Bell, PlusCircle, DollarSign, X } from "lucide-react";
+import { AuthContext } from "./AuthContext.tsx";
 import "../styles/notification.css";
 
 export type NotificationType = "NOVO_PEDIDO" | "ITENS_ADICIONADOS" | "PAGAMENTO";
@@ -18,6 +19,7 @@ interface NotificationContextData {
 const NotificationContext = createContext<NotificationContextData>({} as NotificationContextData);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
+    const { user } = useContext(AuthContext);
     const [fila, setFila] = useState<NotificationItem[]>([]);
     const [notificacaoAtiva, setNotificacaoAtiva] = useState<NotificationItem | null>(null);
     const [isExiting, setIsExiting] = useState(false);
@@ -77,13 +79,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     useEffect(() => {
         if (!notificacaoAtiva && fila.length > 0) {
             const proxima = fila[0];
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setNotificacaoAtiva(proxima);
-            setFila((prev) => prev.slice(1));
-            setIsExiting(false);
-            tocarSom(proxima.type);
+            const ehPagamento = proxima.type === "PAGAMENTO";
+            const ehAutorizado = user?.role === "CAIXA";
+            if (ehPagamento && !ehAutorizado) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
+                setFila((prev) => prev.slice(1));
+            } else {
+                // Caso contrário, exibe normalmente
+                setNotificacaoAtiva(proxima);
+                setFila((prev) => prev.slice(1));
+                setIsExiting(false);
+                tocarSom(proxima.type);
+            }
         }
-    }, [fila, notificacaoAtiva]);
+    }, [fila, notificacaoAtiva, user]);
 
     // Timer para fechar a notificação automaticamente após 5 segundos
     useEffect(() => {

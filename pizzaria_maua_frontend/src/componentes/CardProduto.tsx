@@ -26,7 +26,7 @@ export default function CardProduto({
         <div
             className="card-produto"
             onClick={() => onVerDetalhes(produto)}
-        >
+            data-tour="step-1">
             {ehVegano && (
                 <div className="badge-vegano-tag">
                     <Leaf size={12} />
@@ -71,7 +71,7 @@ export default function CardProduto({
                         e.stopPropagation();
                         onAdicionar(produto);
                     }}
-                >
+                    data-tour="step-2">
                     <Plus size={18} />
                     <span>Adicionar</span>
                 </button>

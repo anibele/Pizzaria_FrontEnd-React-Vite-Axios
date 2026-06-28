@@ -13,9 +13,6 @@ export default function StandByPizzaria({ onToque }: StandByPizzariaProps) {
                 alt="Standby Pizzaria Mauá"
                 className="standby-imagem"
             />
-            <div className="standby-overlay-texto">
-                Toque em qualquer lugar para iniciar
-            </div>
         </div>
     );
 }
