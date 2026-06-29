@@ -5,7 +5,6 @@ import NavBar from "./componentes/NavBar";
 import MenuGerente from "./componentes/MenuGerente";
 import { AuthContext } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
-import MenuCaixa from "./componentes/MenuCaixa";
 import "./App.css";
 
 export default function App() {
@@ -22,11 +21,11 @@ export default function App() {
                 {/* 1. NavBar Global (Login/Logout, etc) */}
                 {authenticated && !isAmbienteCozinha && <NavBar />}
 
-                {/* 2. Menu Exclusivo do Gerente (Elegante e componentizado) */}
-                {authenticated && isGerente && !isAmbienteCozinha && <MenuGerente />}
+                {/* 2. Menu Exclusivo do Gerente */}
+                {authenticated && isGerente && <MenuGerente />}
 
                 {/* 3. Menu do caixa */}
-                {authenticated && isCaixa && !isAmbienteCozinha && <MenuCaixa />}
+                {authenticated && isCaixa && !isAmbienteCozinha}
 
                 {/* 4. Renderização da tela */}
                 <main className="conteudo-principal" style={{ padding: isAmbienteCozinha ? "0" : "0 20px" }}>

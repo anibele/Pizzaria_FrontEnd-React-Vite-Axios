@@ -173,6 +173,12 @@ function CardapioConteudo({
         if (mesaStatusData?.status === "LIVRE") {
             setClienteIniciouSessao(false);
             setIsStandBy(false);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setIsModalOpen(false);
+            setIsModalAvisoOpen(false);
+            setPagamentoSolicitado(false);
+            setProdutoSelecionado(null);
+            setCarrinho([]);
         }
     }, [mesaStatusData?.status, setClienteIniciouSessao, setIsStandBy]);
 

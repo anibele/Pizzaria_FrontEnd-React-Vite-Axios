@@ -6,7 +6,7 @@ import "../styles/modaldetalhespedido.css";
 interface ModalDetalhesPedidoProps {
     isOpen: boolean;
     onClose: () => void;
-    pedido: PedidoCaixaDados | null; // Tipagem atualizada
+    pedido: PedidoCaixaDados | null; 
 }
 
 export function ModalDetalhesPedido({ isOpen, onClose, pedido }: ModalDetalhesPedidoProps) {

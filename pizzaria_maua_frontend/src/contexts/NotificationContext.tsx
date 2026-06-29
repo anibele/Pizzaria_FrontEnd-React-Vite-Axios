@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Bell, PlusCircle, DollarSign, X } from "lucide-react";
-import { AuthContext } from "./AuthContext.tsx";
+import { AuthContext } from "./AuthContext"; // Confirme o caminho
 import "../styles/notification.css";
 
 export type NotificationType = "NOVO_PEDIDO" | "ITENS_ADICIONADOS" | "PAGAMENTO";
@@ -24,28 +24,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const [notificacaoAtiva, setNotificacaoAtiva] = useState<NotificationItem | null>(null);
     const [isExiting, setIsExiting] = useState(false);
 
-    // Função para tocar os sons correspondentes
     const tocarSom = (type: NotificationType) => {
         let audioPath = "";
         switch (type) {
-            case "NOVO_PEDIDO":
-                audioPath = "/sons/campainha.mp3";
-                break;
-            case "ITENS_ADICIONADOS":
-                audioPath = "/sons/bipe.mp3";
-                break;
-            case "PAGAMENTO":
-                audioPath = "/sons/caixa.mp3";
-                break;
+            case "NOVO_PEDIDO": audioPath = "/sons/campainha.mp3"; break;
+            case "ITENS_ADICIONADOS": audioPath = "/sons/bipe.mp3"; break;
+            case "PAGAMENTO": audioPath = "/sons/caixa.mp3"; break;
         }
 
         if (audioPath) {
             const audio = new Audio(audioPath);
-            audio.play().catch((err) => console.log("Áudio bloqueado pelo navegador:", err));
+            audio.play().catch((err) => console.log("Áudio bloqueado:", err));
         }
     };
 
-    // Expõe a função para qualquer componente disparar um alerta
     const adicionarNotificacao = useCallback((type: NotificationType, mesa: number, detalhes?: string) => {
         let title = "";
         let message = "";
@@ -57,7 +49,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 break;
             case "ITENS_ADICIONADOS":
                 title = "Mais Itens no pedido!";
-                message = `Mesa ${mesa} adicionou novos itens ao pedido.`;
+                message = `Mesa ${mesa} adicionou novos itens.`;
                 break;
             case "PAGAMENTO":
                 title = "Solicitação de Pagamento!";
@@ -65,27 +57,28 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 break;
         }
 
-        const novaNotificacao: NotificationItem = {
+        setFila((prev) => [...prev, {
             id: Math.random().toString(36).substring(2, 9),
             type,
             title,
             message,
-        };
-
-        setFila((prev) => [...prev, novaNotificacao]);
+        }]);
     }, []);
 
-    // Controla o consumo da fila (exibe uma por vez)
     useEffect(() => {
         if (!notificacaoAtiva && fila.length > 0) {
             const proxima = fila[0];
             const ehPagamento = proxima.type === "PAGAMENTO";
-            const ehAutorizado = user?.role === "CAIXA";
+
+            // CORREÇÃO: Permite que Caixa ou Gerente vejam, com ou sem o prefixo ROLE_
+            const cargosPermitidos = ["CAIXA", "ROLE_CAIXA", "GERENTE", "ROLE_GERENTE", "ADMIN", "ROLE_ADMIN"];
+            const cargoUsuario = user?.role?.toUpperCase() || "";
+            const ehAutorizado = cargosPermitidos.includes(cargoUsuario);
+
             if (ehPagamento && !ehAutorizado) {
                 // eslint-disable-next-line react-hooks/set-state-in-effect
                 setFila((prev) => prev.slice(1));
             } else {
-                // Caso contrário, exibe normalmente
                 setNotificacaoAtiva(proxima);
                 setFila((prev) => prev.slice(1));
                 setIsExiting(false);
@@ -94,16 +87,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }
     }, [fila, notificacaoAtiva, user]);
 
-    // Timer para fechar a notificação automaticamente após 5 segundos
     useEffect(() => {
         if (notificacaoAtiva) {
-            const timerOpacidade = setTimeout(() => {
-                setIsExiting(true); // Dispara a animação de saída (CSS)
-            }, 4500);
-
-            const timerFechar = setTimeout(() => {
-                setNotificacaoAtiva(null);
-            }, 5000); // 500ms depois para dar tempo da animação acabar
+            const timerOpacidade = setTimeout(() => setIsExiting(true), 4500);
+            const timerFechar = setTimeout(() => setNotificacaoAtiva(null), 5000);
 
             return () => {
                 clearTimeout(timerOpacidade);
@@ -114,45 +101,36 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     const fecharManualmente = () => {
         setIsExiting(true);
+        // CORREÇÃO: Diminuído de 4000 (4 segundos) para 400ms (tempo exato do CSS)
         setTimeout(() => {
             setNotificacaoAtiva(null);
-        }, 4000);
+        }, 400);
     };
 
-    // Renderiza o ícone correto baseado no tipo
     const renderIcon = (type: NotificationType) => {
         switch (type) {
-            case "NOVO_PEDIDO":
-                return <Bell className="notif-icon-svg" size={32} />;
-            case "ITENS_ADICIONADOS":
-                return <PlusCircle className="notif-icon-svg" size={32} />;
-            case "PAGAMENTO":
-                return <DollarSign className="notif-icon-svg" size={32} />;
+            case "NOVO_PEDIDO": return <Bell className="notif-icon-svg" size={32} />;
+            case "ITENS_ADICIONADOS": return <PlusCircle className="notif-icon-svg" size={32} />;
+            case "PAGAMENTO": return <DollarSign className="notif-icon-svg" size={32} />;
         }
     };
 
     return (
         <NotificationContext.Provider value={{ adicionarNotificacao }}>
             {children}
-
-            {/* Renderização do Toast Gigante na Tela */}
             {notificacaoAtiva && (
                 <div className={`notif-overlay-container ${isExiting ? "exit" : "enter"}`}>
                     <div className={`notif-card ${notificacaoAtiva.type.toLowerCase()}`}>
                         <div className="notif-icon-wrapper">
                             {renderIcon(notificacaoAtiva.type)}
                         </div>
-
                         <div className="notif-content">
                             <h3>{notificacaoAtiva.title}</h3>
                             <p>{notificacaoAtiva.message}</p>
                         </div>
-
                         <button className="notif-close-btn" onClick={fecharManualmente}>
                             <X size={20} />
                         </button>
-
-                        {/* Barrinha de progresso de 5 segundos */}
                         <div className="notif-progress-bar" />
                     </div>
                 </div>

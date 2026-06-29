@@ -1,13 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
-import { DollarSign } from "lucide-react";
-import "../styles/menuGerente.css";
+import { DollarSign, Archive } from "lucide-react";
+import "../styles/menuCaixa.css";
 
 export default function MenuCaixa() {
     const location = useLocation();
 
     const links = [
-        { path: "/caixa", label: "Pagamentos", icon: DollarSign },
-        // Você pode adicionar mais opções aqui futuramente (ex: histórico)
+        { path: "/caixa", label: "Caixa Atual", icon: DollarSign, exact: true },
+        { path: "/caixa/arquivo", label: "Arquivo / Histórico", icon: Archive, exact: false },
     ];
 
     return (
@@ -15,7 +15,10 @@ export default function MenuCaixa() {
             <ul className="menu-caixa-lista">
                 {links.map((link) => {
                     const Icon = link.icon;
-                    const isActive = location.pathname.startsWith(link.path);
+                    // Lógica para verificar rota ativa de forma precisa
+                    const isActive = link.exact
+                        ? location.pathname === link.path
+                        : location.pathname.startsWith(link.path);
 
                     return (
                         <li key={link.path}>

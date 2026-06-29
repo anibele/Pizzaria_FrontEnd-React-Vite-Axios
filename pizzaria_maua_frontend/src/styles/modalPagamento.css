@@ -9,7 +9,7 @@
     justify-content: center;
     align-items: center;
     z-index: 100000;
-    backdrop-filter: blur(4px); /* Suave desfoque no fundo */
+    backdrop-filter: blur(4px);
     animation: modalFadeIn 0.2s ease-out;
 }
 
@@ -114,92 +114,4 @@
     line-height: 1.6;
     color: #444;
     margin: 0;
-}
-
-.timer-aviso {
-    font-family: sans-serif;
-    font-size: 0.8rem;
-    color: #aaa;
-    margin-top: 24px;
-    font-style: italic;
-}
-
-/* Animações */
-@keyframes modalFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes modalScaleUp {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-
-@keyframes bouncePop {
-    0% { transform: scale(0.4); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-.btn-timer-container {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-modal-fechar-timer {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: #999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    position: absolute;
-    z-index: 2;
-    transition: background 0.2s, color 0.2s;
-}
-
-.btn-modal-fechar-timer:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: #333;
-}
-
-.svg-countdown {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 34px;
-    height: 34px;
-    transform: rotate(-90deg); /* Gira para o carregamento começar de cima */
-    z-index: 1;
-    pointer-events: none; /* Deixa o clique passar para o botão X */
-}
-
-.svg-countdown-bg {
-    fill: none;
-    stroke: #f0f0f0;
-    stroke-width: 2.5;
-}
-
-.svg-countdown-progress {
-    fill: none;
-    stroke: #2e7d32; /* Verde combinando com o texto de Pronto */
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    stroke-dasharray: 88; /* Tamanho exato da circunferência para o raio 14 */
-    stroke-dashoffset: 88;
-    animation: carregarBolinha 10s linear forwards; /* 10s sincronizados com o seu hook */
-}
-
-@keyframes carregarBolinha {
-    to { stroke-dashoffset: 0; }
 }

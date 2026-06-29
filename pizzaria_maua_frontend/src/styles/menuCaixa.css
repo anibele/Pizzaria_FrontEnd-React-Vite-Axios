@@ -1,0 +1,52 @@
+.menu-caixa-container {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: center; /* Centraliza horizontalmente o menu inteiro */
+    align-items: center;
+}
+
+.menu-caixa-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 16px; /* Espaçamento entre os botões */
+    background-color: #f3f4f6; /* Efeito pílula ao redor do grupo de botões */
+    padding: 6px;
+    border-radius: 30px;
+}
+
+.menu-caixa-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    text-decoration: none;
+    color: #4b5563;
+    font-weight: 600;
+    font-size: 0.95rem;
+    font-family: sans-serif;
+    border-radius: 20px;
+    transition: all 0.2s ease-in-out;
+}
+
+.menu-caixa-link:hover {
+    color: #1f2937;
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.menu-caixa-link.ativo {
+    background-color: #ffffff;
+    color: #e53935; /* Destaque vermelho da sua pizzaria */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.menu-caixa-link svg {
+    transition: transform 0.2s;
+}
+
+.menu-caixa-link.ativo svg {
+    transform: scale(1.1);
+}

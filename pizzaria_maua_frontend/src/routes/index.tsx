@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
 import Login from "../pages/Login";
 import DashboardGerente from "../pages/DashboardGerente";
@@ -7,6 +7,8 @@ import MesasGerente from "./MesasGerente";
 import PedidosCozinha from "./PedidosCozinha";
 import CardapioCliente from "./CardapioCliente";
 import DashboardCaixa from "../pages/DashboardCaixa";
+import ArquivoCaixa from "../pages/ArquivoCaixa";
+import MenuCaixa from "../componentes/MenuCaixa";
 
 export default function AppRoutes() {
     return (
@@ -56,15 +58,26 @@ export default function AppRoutes() {
                     </ProtectedRoute>
                 }
             />
-            {/* 💰 Rota do Caixa */}
+
+            {/* 💰 Rotas do Caixa (Dashboard e Arquivo unificados) */}
             <Route
                 path="/caixa"
-                element = {
+                element={
                     <ProtectedRoute allowedRoles={["CAIXA", "GERENTE"]}>
-                        <DashboardCaixa />
+                        {/* O MenuCaixa envelopa apenas o contexto do Caixa */}
+                        <>
+                            <MenuCaixa />
+                            <Outlet /> {/* O Outlet renderiza dinamicamente a rota filha ativa */}
+                        </>
                     </ProtectedRoute>
                 }
-            />
+            >
+                {/* Rota padrão: /caixa */}
+                <Route index element={<DashboardCaixa />} />
+
+                {/* Sub-rota: /caixa/arquivo */}
+                <Route path="arquivo" element={<ArquivoCaixa />} />
+            </Route>
 
             {/* 📱 Rota do Cardápio Digital (Exclusiva para os tablets das Mesas) */}
             <Route
@@ -75,7 +88,6 @@ export default function AppRoutes() {
                     </ProtectedRoute>
                 }
             />
-
 
             {/* Feedback visual para tentativas de acessos indevidos */}
             <Route

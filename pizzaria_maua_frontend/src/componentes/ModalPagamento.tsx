@@ -4,57 +4,40 @@ import "../styles/modalPagamento.css";
 
 interface ModalPagamentoProps {
     isOpen: boolean;
-    onClose: () => void; // O onClose serve apenas para fechar o modal visualmente
-    onSolicitarPagamento: (forma: 'PIX' | 'CARTAO' | 'DINHEIRO') => void; // Dispara o BACK-END na hora!
+    onClose: () => void;
+    onSolicitarPagamento: (forma: 'PIX' | 'CARTAO' | 'DINHEIRO') => void;
 }
 
 export default function ModalPagamento({ isOpen, onClose, onSolicitarPagamento }: ModalPagamentoProps) {
     const [passo, setPasso] = useState<1 | 2>(1);
 
-    // TIMER AUTOMÁTICO DE 10 SEGUNDOS PARA O PASSO 2 (Apenas visual)
+    // Garante que o modal volte ao passo 1 silenciosamente caso a mesa seja resetada
     useEffect(() => {
-        if (!isOpen || passo !== 2) return;
-
-        const autoCloseTimer = setTimeout(() => {
-            onClose(); // Apenas fecha a tela, o pagamento já foi enviado no passo 1
+        if (!isOpen) {
             setTimeout(() => setPasso(1), 300);
-        }, 10000);
-
-        return () => clearTimeout(autoCloseTimer);
-    }, [passo, isOpen, onClose]);
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
     const handleEscolherForma = (forma: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
-        // 🔥 PASSO CHAVE: Avisa o componente Pai para atualizar o banco de dados AGORA!
         onSolicitarPagamento(forma);
-        setPasso(2); // Avança para a animação de sucesso
+        setPasso(2); // Avança e "tranca" a tela no passo 2
     };
 
     const handleFecharManualmente = () => {
-        onClose(); // Fecha direto
-        setTimeout(() => setPasso(1), 300);
+        onClose();
     };
 
     return (
         <div className="modal-overlay">
             <div className="modal-container">
 
-                {/* Botão de Fechar fixo no topo direito */}
-                {passo === 1 ? (
-                    <button onClick={handleFecharManualmente} className="btn-modal-fechar" title="Fechar">
+                {/* Botão de Fechar é renderizado APENAS no passo 1 */}
+                {passo === 1 && (
+                    <button onClick={handleFecharManualmente} className="btn-modal-fechar" title="Voltar ao Cardápio">
                         <X size={22} />
                     </button>
-                ) : (
-                    <div className="btn-timer-container">
-                        <button onClick={handleFecharManualmente} className="btn-modal-fechar-timer" title="Fechar">
-                            <X size={18} />
-                        </button>
-                        <svg className="svg-countdown" viewBox="0 0 34 34">
-                            <circle cx="17" cy="17" r="14" className="svg-countdown-bg" />
-                            <circle cx="17" cy="17" r="14" className="svg-countdown-progress" />
-                        </svg>
-                    </div>
                 )}
 
                 {passo === 1 ? (
@@ -79,14 +62,14 @@ export default function ModalPagamento({ isOpen, onClose, onSolicitarPagamento }
                         <div className="sucesso-icone-wrapper">
                             <CheckCircle2 size={56} strokeWidth={2.5} />
                         </div>
-                        <h2 className="modal-titulo" style={{ color: "#2e7d32" }}>Pronto!</h2>
+                        <h2 className="modal-titulo" style={{ color: "#2e7d32" }}>Aguarde...</h2>
                         <p className="sucesso-texto">
-                            Obrigado por desfrutar esse momento conosco.
+                            Sua solicitação foi enviada para o caixa!
                         </p>
+                        <br/>
                         <p className="sucesso-texto">
-                            Aguarde o nosso funcionário na sua mesa para finalizar o pagamento.
+                            Por favor, aguarde o nosso atendente vir até a sua mesa para finalizar o pagamento.
                         </p>
-                        <span className="timer-aviso">Esta tela fechará automaticamente inles...</span>
                     </div>
                 )}
             </div>
