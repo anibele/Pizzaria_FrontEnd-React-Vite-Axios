@@ -21,7 +21,7 @@ export default function DashboardCaixa() {
 
     const { data: pedidosBrutos, isLoading } = usePedidosCozinha();
     const { mutate: confirmar, isPending } = usePedidoConfirmarPagamento();
-    const { data: faturamentoDia = 0 } = useFaturamentoDiario(hojeStr); // <-- Consumindo faturamento do dia
+    const { data: faturamentoDia = 0 } = useFaturamentoDiario(hojeStr);
 
     const { adicionarNotificacao } = useNotification();
     const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoCaixaDados | null>(null);

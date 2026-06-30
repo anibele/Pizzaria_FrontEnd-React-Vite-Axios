@@ -84,7 +84,7 @@ export default function CardPedidoCozinha({ pedido, itensDespachados, onMarcarCo
                                 onClick={() => onMarcarComoEntregue(item.id)}
                                 disabled={foiClicado}
                             >
-                                {foiClicado ? <Check size={20} /> : "Pronto"}
+                                <Check size={22} strokeWidth={3} />
                             </button>
                         </li>
                     );
