@@ -11,7 +11,13 @@ import { useNotification } from "../contexts/NotificationContext";
 import "../styles/dashboardCaixa.css";
 
 export default function DashboardCaixa() {
-    const hojeStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+        const hojeStr = useMemo(() => {
+        const d = new Date();
+        const ano = d.getFullYear();
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`;
+    }, []);
 
     const { data: pedidosBrutos, isLoading } = usePedidosCozinha();
     const { mutate: confirmar, isPending } = usePedidoConfirmarPagamento();

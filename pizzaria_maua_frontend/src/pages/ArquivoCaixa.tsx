@@ -17,7 +17,13 @@ import "../styles/arquivoCaixa.css";
 
 export default function ArquivoCaixa() {
     // Inicializa a data filtro padrão com o dia de HOJE no formato YYYY-MM-DD
-    const hojeStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+    const hojeStr = useMemo(() => {
+        const d = new Date();
+        const ano = d.getFullYear();
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`;
+    }, []);
     const [dataFiltro, setDataFiltro] = useState<string>(hojeStr);
     const [visao, setVisao] = useState<"CARDS" | "TABELA">("CARDS");
     const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoCaixaDados | null>(null);
