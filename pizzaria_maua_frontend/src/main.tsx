@@ -5,6 +5,13 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./contexts/AuthContext";
 
+// Tema visual (Ex existem vários, o Lara Light Indigo é o padrão limpo do Sakai)
+import "primereact/resources/themes/lara-light-indigo/theme.css";
+// Estrutura core do PrimeReact
+import "primereact/resources/primereact.min.css";
+// Pacote de ícones oficiais do PrimeReact
+import "primeicons/primeicons.css";
+
 import { PrimeReactProvider } from 'primereact/api';
 import "primereact/resources/themes/lara-light-indigo/theme.css"; // Tema (pode mudar depois se quiser)
 import "primereact/resources/primereact.min.css";                 // Core CSS do PrimeReact

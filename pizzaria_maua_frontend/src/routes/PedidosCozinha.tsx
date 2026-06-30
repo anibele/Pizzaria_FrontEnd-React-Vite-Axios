@@ -4,7 +4,8 @@ import { usePedidoItemStatus } from "../hooks/usePedidoItemStatus";
 import { useNotification } from "../contexts/NotificationContext";
 import NavbarCozinha from "../componentes/NavbarCozinha";
 import CardPedidoCozinha from "../componentes/CardPedidoCozinha";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, BrickWallFire, Zap } from "lucide-react";
+import { calcularPrioridadeKds } from "../services/kdsCalculadora";
 import "../styles/pedidosCozinha.css";
 
 interface ItemPedidoCozinha {
@@ -14,67 +15,66 @@ interface ItemPedidoCozinha {
     quantidade: number;
     precoUnitario: number;
     status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
+    dataHoraInclusao: string;
+    tempoPreparoMinutos: number;
 }
 
 interface PedidoCozinhaDados {
     id: number;
     numeroMesa: number;
     dataHora: string;
-    status: "ABERTO" | "AGUARDANDO_PAGAMENTO" | "FINALIZADO"; // 👈 Alinhado com o Back-end
+    status: "ABERTO" | "AGUARDANDO_PAGAMENTO" | "FINALIZADO";
     formaPagamento: string;
     itens: ItemPedidoCozinha[];
 }
 
+const LIMITE_MINUTOS_RAPIDO = 15;
+
 export default function PedidosCozinha() {
     const { data, isLoading, isError } = usePedidosCozinha();
     const { mutate: atualizarStatus } = usePedidoItemStatus();
-    const { adicionarNotificacao } = useNotification(); // 👈 Destruturado aqui
+    const { adicionarNotificacao } = useNotification();
 
     const [itensDespachados, setItensDespachados] = useState<number[]>([]);
+    const [, setTickTempo] = useState(0);
 
-    // Guardas de estado para o algoritmo de comparação (Diffing)
     const prevPedidosRef = useRef<PedidoCozinhaDados[]>([]);
     const isFirstLoadRef = useRef(true);
 
-    const pedidos = (data as unknown as PedidoCozinhaDados[]) || [];
+    const pedidosOriginais = (data as unknown as PedidoCozinhaDados[]) || [];
 
-    // 🔥 Algoritmo de Diffing: Compara a lista antiga com a nova a cada Polling
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTickTempo((t) => t + 1);
+        }, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
     useEffect(() => {
         if (isLoading || isError || !data) return;
-
         const novosPedidos = data as unknown as PedidoCozinhaDados[];
 
-        // Se for a primeiríssima carga, apenas salvamos o estado atual e pulamos os alertas
         if (isFirstLoadRef.current) {
             prevPedidosRef.current = novosPedidos;
             isFirstLoadRef.current = false;
             return;
         }
 
-        // Varre a nova lista comparando com o histórico em memória
         novosPedidos.forEach((newPedido) => {
             const oldPedido = prevPedidosRef.current.find((p) => p.id === newPedido.id);
 
             if (!oldPedido) {
-                // GATILHO 1: O ID do pedido não existia na lista anterior -> Novo Pedido!
                 adicionarNotificacao("NOVO_PEDIDO", newPedido.numeroMesa);
             } else {
-                // GATILHO 2: Verificando se novos itens foram adicionados à mesma mesa
                 if (newPedido.itens.length > oldPedido.itens.length) {
                     adicionarNotificacao("ITENS_ADICIONADOS", newPedido.numeroMesa);
                 }
-
-                // GATILHO 3: Verificando se o cliente solicitou a conta pelo tablet
-                if (
-                    newPedido.status === "AGUARDANDO_PAGAMENTO" &&
-                    oldPedido.status !== "AGUARDANDO_PAGAMENTO"
-                ) {
+                if (newPedido.status === "AGUARDANDO_PAGAMENTO" && oldPedido.status !== "AGUARDANDO_PAGAMENTO") {
                     adicionarNotificacao("PAGAMENTO", newPedido.numeroMesa, newPedido.formaPagamento);
                 }
             }
         });
 
-        // Atualiza a referência em memória para a próxima verificação daqui a 5 segundos
         prevPedidosRef.current = novosPedidos;
     }, [data, isLoading, isError, adicionarNotificacao]);
 
@@ -82,6 +82,53 @@ export default function PedidosCozinha() {
         setItensDespachados((prev) => [...prev, itemId]);
         atualizarStatus({ itemId, status: "PRONTO" });
     };
+
+    // MOTOR DE ROTEAMENTO E ORDENAÇÃO
+    const processarPedidos = (tipoDaColuna: 'RAPIDO' | 'LENTO') => {
+        return pedidosOriginais
+            .map(pedido => {
+                // 1. Filtra apenas os itens que pertencem a esta coluna e não estão prontos
+                const itensFiltrados = pedido.itens.filter(item => {
+                    const isAtivo = item.status !== "PRONTO" && !itensDespachados.includes(item.id);
+                    const isRapido = item.tempoPreparoMinutos <= LIMITE_MINUTOS_RAPIDO;
+                    return isAtivo && (tipoDaColuna === 'RAPIDO' ? isRapido : !isRapido);
+                });
+                return { ...pedido, itens: itensFiltrados };
+            })
+            // 2. Remove da lista as comandas que ficaram sem itens para esta coluna
+            .filter(pedido => pedido.itens.length > 0)
+            // 3. Ordena a fila da coluna
+            .sort((a, b) => {
+                let temAtrasadoA = false;
+                let menorTempoA = Infinity;
+                a.itens.forEach(i => {
+                    const calc = calcularPrioridadeKds(i.dataHoraInclusao, i.tempoPreparoMinutos);
+                    if (calc.status === 'ATRASADO') temAtrasadoA = true;
+                    if (calc.minutosRestantes < menorTempoA) menorTempoA = calc.minutosRestantes;
+                });
+
+                let temAtrasadoB = false;
+                let menorTempoB = Infinity;
+                b.itens.forEach(i => {
+                    const calc = calcularPrioridadeKds(i.dataHoraInclusao, i.tempoPreparoMinutos);
+                    if (calc.status === 'ATRASADO') temAtrasadoB = true;
+                    if (calc.minutosRestantes < menorTempoB) menorTempoB = calc.minutosRestantes;
+                });
+
+                // Regra 1: Pedidos com itens atrasados sobem para o topo
+                if (temAtrasadoA && !temAtrasadoB) return -1;
+                if (!temAtrasadoA && temAtrasadoB) return 1;
+
+                // Regra 2: Ordena pelo menor tempo restante dentro do card
+                if (menorTempoA !== menorTempoB) return menorTempoA - menorTempoB;
+
+                // Regra 3 (Desempate): Ordem de chegada do pedido
+                return new Date(a.dataHora).getTime() - new Date(b.dataHora).getTime();
+            });
+    };
+
+    const pedidosRapidos = processarPedidos('RAPIDO');
+    const pedidosLentos = processarPedidos('LENTO');
 
     if (isLoading) {
         return (
@@ -97,39 +144,71 @@ export default function PedidosCozinha() {
             <div className="cozinha-tela-mensagem erro">
                 <AlertCircle size={64} color="#d32f2f" />
                 <h2>Erro de conexão</h2>
-                <p>Não foi possível conectar com o servidor. Verifique a rede.</p>
+                <p>Não foi possível conectar com o servidor.</p>
             </div>
         );
     }
-
-    // Filtra se sobrou algum pedido pendente/em preparo para exibir na tela
-    const existemPedidosAtivos = pedidos.some(pedido =>
-        pedido.itens.some(item => item.status !== "PRONTO" && !itensDespachados.includes(item.id))
-    );
 
     return (
         <div className="cozinha-dashboard-bg">
             <NavbarCozinha />
 
-            <main className="cozinha-main-content">
-                {!existemPedidosAtivos ? (
-                    <div className="cozinha-vazia">
-                        <CheckCircle2 size={80} color="#2e7d32" />
-                        <h2>Tudo limpo por aqui!</h2>
-                        <p>Nenhum pedido aguardando preparo no momento. Bom trabalho!</p>
+            <main className="cozinha-main-content split-layout">
+                {/* COLUNA ESQUERDA: ITENS RÁPIDOS */}
+                <section className="kds-coluna kds-rapidos">
+                    <div className="kds-coluna-header">
+                        <h3>
+                            <Zap size={25} color="#FFFF00" />
+                            Preparo Rápido (Até {LIMITE_MINUTOS_RAPIDO}m)</h3>
                     </div>
-                ) : (
-                    <div className="cozinha-grid-pedidos">
-                        {pedidos.map((pedido) => (
-                            <CardPedidoCozinha
-                                key={pedido.id}
-                                pedido={pedido}
-                                itensDespachados={itensDespachados}
-                                onMarcarComoEntregue={handleMarcarComoEntregue}
-                            />
-                        ))}
+                    {pedidosRapidos.length === 0 ? (
+                        <div className="cozinha-vazia-coluna">
+                            <CheckCircle2 size={40} color="#2e7d32" />
+                            <p>Sem pedidos no momento.</p>
+                        </div>
+                    ) : (
+                        <div className="cozinha-grid-pedidos-coluna">
+                            {pedidosRapidos.map((pedido) => (
+                                <CardPedidoCozinha
+                                    key={`rapido-${pedido.id}`}
+                                    pedido={pedido}
+                                    itensDespachados={itensDespachados}
+                                    onMarcarComoEntregue={handleMarcarComoEntregue}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
+
+                {/* DIVISÓRIA CENTRAL */}
+                <div className="kds-divisor"></div>
+
+                {/* COLUNA DIREITA: ITENS LENTOS */}
+                <section className="kds-coluna kds-lentos">
+                    <div className="kds-coluna-header">
+                        <h3 className="kds-header-titulo">
+                            <BrickWallFire size={25} color="#f4a84d" />
+                            <span>Forno / Preparo Lento (+{LIMITE_MINUTOS_RAPIDO}m)</span>
+                        </h3>
                     </div>
-                )}
+                    {pedidosLentos.length === 0 ? (
+                        <div className="cozinha-vazia-coluna">
+                            <CheckCircle2 size={40} color="#2e7d32" />
+                            <p>Sem pedidos no momento.</p>
+                        </div>
+                    ) : (
+                        <div className="cozinha-grid-pedidos-coluna">
+                            {pedidosLentos.map((pedido) => (
+                                <CardPedidoCozinha
+                                    key={`lento-${pedido.id}`}
+                                    pedido={pedido}
+                                    itensDespachados={itensDespachados}
+                                    onMarcarComoEntregue={handleMarcarComoEntregue}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
             </main>
         </div>
     );
