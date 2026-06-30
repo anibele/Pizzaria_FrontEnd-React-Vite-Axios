@@ -11,7 +11,7 @@ import { useNotification } from "../contexts/NotificationContext";
 import "../styles/dashboardCaixa.css";
 
 export default function DashboardCaixa() {
-    const hojeStr = useMemo(() => {
+        const hojeStr = useMemo(() => {
         const d = new Date();
         const ano = d.getFullYear();
         const mes = String(d.getMonth() + 1).padStart(2, '0');
