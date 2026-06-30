@@ -12,12 +12,12 @@
     flex: 1;
 }
 
-/* Grid automático responsivo: os cards vão se alinhando sozinhos */
+/* Grid automático responsivo antigo (mantido por segurança caso use em outra tela) */
 .cozinha-grid-pedidos {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
     gap: 24px;
-    align-items: start; /* Impede que cards de tamanhos diferentes se estiquem */
+    align-items: start; 
 }
 
 /* Mensagens centrais de Loading, Erro e "Tudo Limpo" */
@@ -57,4 +57,80 @@
 
 .cozinha-vazia p {
     font-size: 1.2rem;
+}
+
+/* Transforma a tela principal em duas metades */
+.cozinha-main-content.split-layout {
+    display: flex;
+    flex-direction: row;
+    height: calc(100vh - 80px); /* Ajuste conforme a altura da sua Navbar */
+    padding: 20px;
+    gap: 20px;
+    overflow: hidden;
+}
+
+/* Configura as colunas de Rápidos e Lentos para dividirem 50% da tela cada */
+.kds-coluna {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Permite scroll independente em cada lado */
+    padding-right: 10px;
+}
+
+/* Headers das colunas */
+.kds-coluna-header {
+    background-color: #1e1e24;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.kds-coluna-header h3 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Divisória sutil no meio da tela */
+.kds-divisor {
+    width: 2px;
+    background-color: #d1d5db;
+    border-radius: 2px;
+}
+
+.cozinha-grid-pedidos-coluna {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.cozinha-vazia-coluna {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    opacity: 0.6;
+    color: #aaa;
+}
+
+/* MEDIDA DE SEGURANÇA: Garante uma altura máxima confortável para os cards */
+.card-cozinha {
+    max-height: 450px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Se um card tiver itens demais (ex: comanda imensa), a lista interna ganha scroll em vez de estragar o layout */
+.card-cozinha-lista {
+    overflow-y: auto;
+    flex: 1;
 }

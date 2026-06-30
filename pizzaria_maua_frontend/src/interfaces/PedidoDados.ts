@@ -5,6 +5,11 @@ export interface ItemPedidoDados {
     id?: number;
     produto: ProdutoDados;
     quantidade: number;
+
+    // NOVOS CAMPOS ADICIONADOS PARA A FILA INTELIGENTE DA COZINHA:
+    status: 'PENDENTE' | 'EM_PREPARO' | 'PRONTO';
+    dataHoraInclusao: string;     // O LocalDateTime do Java chega aqui como String ISO
+    tempoPreparoMinutos: number;  // Inteiro pronto para fazermos as contas de peso e prioridade
 }
 
 export interface PedidoDados {
@@ -23,7 +28,7 @@ export interface CriarPedidoInput {
         produtoId: number;
         quantidade: number;
     }[];
-    formaPagamento: string; // Ex: "Pendente"
+    formaPagamento: string;
 }
 
 export interface AdicionarItensInput {

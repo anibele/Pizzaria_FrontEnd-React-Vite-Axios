@@ -1,4 +1,6 @@
-import { Clock, Check, UtensilsCrossed } from "lucide-react";
+import { UtensilsCrossed, Check } from "lucide-react";
+import BadgeTimerKds from "./BadgeTimerKds";
+import { calcularPrioridadeKds, type KdsStatus } from "../services/kdsCalculadora";
 import "../styles/cardPedidoCozinha.css";
 
 interface ItemPedidoCozinha {
@@ -8,6 +10,8 @@ interface ItemPedidoCozinha {
     quantidade: number;
     precoUnitario: number;
     status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
+    dataHoraInclusao: string;
+    tempoPreparoMinutos: number;
 }
 
 interface PedidoCozinhaDados {
@@ -25,44 +29,54 @@ interface CardPedidoCozinhaProps {
 }
 
 export default function CardPedidoCozinha({ pedido, itensDespachados, onMarcarComoEntregue }: CardPedidoCozinhaProps) {
-    const formatarHora = (dataString: string) => {
-        try {
-            const dataObjeto = new Date(dataString);
-            return dataObjeto.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } catch {
-            return "--:--";
+    // Ordena os itens do mais urgente (menor tempo restante) para o menos urgente
+    const itensOrdenados = [...pedido.itens].sort((a, b) => {
+        const calcA = calcularPrioridadeKds(a.dataHoraInclusao, a.tempoPreparoMinutos);
+        const calcB = calcularPrioridadeKds(b.dataHoraInclusao, b.tempoPreparoMinutos);
+        return calcA.minutosRestantes - calcB.minutosRestantes;
+    });
+
+    if (itensOrdenados.length === 0) return null;
+
+    // Descobre o pior status para pintar o Header do Card
+    let statusGeral: KdsStatus = "NORMAL";
+    for (const item of itensOrdenados) {
+        const calculo = calcularPrioridadeKds(item.dataHoraInclusao, item.tempoPreparoMinutos);
+        if (calculo.status === "ATRASADO") {
+            statusGeral = "ATRASADO";
+            break; // Atrasado é o peso máximo, pode parar de procurar
         }
-    };
-
-    // Filtra os itens que não estão prontos e não foram recém-clicados
-    const itensAtivos = (pedido.itens || []).filter(
-        (item) => item.status !== "PRONTO" && !itensDespachados.includes(item.id)
-    );
-
-    // Se a comanda já foi toda entregue, o card some
-    if (itensAtivos.length === 0) return null;
+        if (calculo.status === "ALERTA") {
+            statusGeral = "ALERTA";
+        }
+    }
 
     return (
-        <div className="card-cozinha">
+        <div className={`card-cozinha status-${statusGeral.toLowerCase()}`}>
             <div className="card-cozinha-header">
                 <div className="mesa-badge">
                     MESA {pedido.numeroMesa}
                 </div>
-                <div className="tempo-badge">
-                    <Clock size={16} />
-                    {formatarHora(pedido.dataHora)}
-                </div>
             </div>
 
             <ul className="card-cozinha-lista">
-                {itensAtivos.map((item) => {
+                {itensOrdenados.map((item) => {
                     const foiClicado = itensDespachados.includes(item.id);
+                    const calculo = calcularPrioridadeKds(item.dataHoraInclusao, item.tempoPreparoMinutos);
 
                     return (
                         <li key={item.id} className={`item-cozinha ${foiClicado ? "item-despachado" : ""}`}>
                             <div className="item-info">
                                 <span className="item-qtd">{item.quantidade}x</span>
-                                <span className="item-nome">{item.produtoNome}</span>
+                                <div className="item-nome-container">
+                                    <span className="item-nome">{item.produtoNome}</span>
+                                    {!foiClicado && (
+                                        <BadgeTimerKds
+                                            status={calculo.status}
+                                            minutosRestantes={calculo.minutosRestantes}
+                                        />
+                                    )}
+                                </div>
                             </div>
 
                             <button

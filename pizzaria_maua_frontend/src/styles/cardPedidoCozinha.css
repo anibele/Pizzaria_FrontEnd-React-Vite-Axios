@@ -121,3 +121,6 @@
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
 }
+
+.card-cozinha.status-atrasado .card-cozinha-header { background-color: #ffebee; border-bottom-color: #ef9a9a; }
+.item-nome-container { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
