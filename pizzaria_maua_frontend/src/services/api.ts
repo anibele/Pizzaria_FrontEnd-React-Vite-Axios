@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { encerrarSessaoAdicao } from './sessaoAdicao';
 import type { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
 const backendIp = import.meta.env.VITE_BACKEND_IP;
@@ -31,6 +32,7 @@ api.interceptors.response.use(
         // Se o back-end retornar 401 (Não Autorizado / Token Expirado)
         if (error.response && error.response.status === 401) {
             // Limpa o localStorage para remover o token velho e os dados do usuário
+            encerrarSessaoAdicao();
             localStorage.clear();
 
             // Redireciona o navegador à força para a tela de login

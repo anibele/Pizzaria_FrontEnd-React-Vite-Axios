@@ -1,5 +1,6 @@
 import { ClipboardList, Minus, Plus, Loader2, ChefHat } from "lucide-react";
 import ComandaMesa from "./ComandaMesa"; // Importando o novo componente de histórico
+import type { PedidoDados } from "../interfaces/PedidoDados";
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
 import "../styles/pedidoMesa.css";
 
@@ -24,7 +25,12 @@ interface PedidoMesaProps {
     onEnviarParaCozinha: () => void;
     criando: boolean;
     adicionando: boolean;
-    pedidoAtivo: any;
+    adicaoPendente: boolean;
+    mensagemAdicao: string | null;
+    reenvioPermitido: boolean;
+    podeRevisarAdicao: boolean;
+    onRevisarAdicao: () => void;
+    pedidoAtivo: PedidoDados | null | undefined;
     itensConsumidos: ItemPedidoResponse[];
     possuiItensConsumidos: boolean;
     todosItensProntos: boolean;
@@ -38,6 +44,11 @@ export default function PedidoMesa({
                                        onEnviarParaCozinha,
                                        criando,
                                        adicionando,
+                                       adicaoPendente,
+                                       mensagemAdicao,
+                                       reenvioPermitido,
+                                       podeRevisarAdicao,
+                                       onRevisarAdicao,
                                        pedidoAtivo,
                                        itensConsumidos,
                                        possuiItensConsumidos,
@@ -65,6 +76,16 @@ export default function PedidoMesa({
             </h3>
             <p className="pedido-subtitulo">Estes itens ainda não foram para a cozinha.</p>
 
+            {(adicaoPendente || mensagemAdicao) && (
+                <div className="carrinho-conteudo" aria-live="polite" role="status">
+                    <p>{mensagemAdicao || "Confirmação dos itens em andamento. Aguarde antes de alterar a seleção."}</p>
+                    {reenvioPermitido && <button className="btn btn-primary" disabled={adicionando} onClick={onEnviarParaCozinha}>
+                        {adicionando ? "Enviando..." : "Tentar novamente"}
+                    </button>}
+                    {podeRevisarAdicao && <button className="btn btn-primary" onClick={onRevisarAdicao}>Revisar seleção</button>}
+                </div>
+            )}
+
             {carrinho.length === 0 ? (
                 <p className="carrinho-vazio">
                     Seu pedido está vazio. Adicione os itens no menu ao lado!
@@ -83,10 +104,10 @@ export default function PedidoMesa({
                                     </span>
                                 </div>
                                 <div className="carrinho-controles">
-                                    <button className="btn-qty" onClick={() => onRemoverOuDiminuir(item.produto.id!)} title="Diminuir">
+                                    <button className="btn-qty" disabled={adicaoPendente || criando || adicionando} onClick={() => onRemoverOuDiminuir(item.produto.id!)} title="Diminuir">
                                         <Minus size={14} />
                                     </button>
-                                    <button className="btn-qty" onClick={() => onAdicionarAoCarrinho(item.produto)} title="Aumentar">
+                                    <button className="btn-qty" disabled={adicaoPendente || criando || adicionando} onClick={() => onAdicionarAoCarrinho(item.produto)} title="Aumentar">
                                         <Plus size={14} />
                                     </button>
                                 </div>
@@ -100,14 +121,14 @@ export default function PedidoMesa({
                     </div>
 
                     {/* Exibe o somatório total acumulado se houver uma comanda em andamento */}
-                    {pedidoAtivo && possuiItensConsumidos && (
+                    {pedidoAtivo && possuiItensConsumidos && !adicaoPendente && (
                         <div className="total-conta-futura-box">
                             <span>Total acumulado da conta:</span>
                             <span>R$ {totalGeralConta.toFixed(2)}</span>
                         </div>
                     )}
 
-                    <button
+                    {!adicaoPendente && <button
                         onClick={onEnviarParaCozinha}
                         disabled={criando || adicionando}
                         className="btn btn-primary"
@@ -117,7 +138,7 @@ export default function PedidoMesa({
                         ) : (
                             <><ChefHat size={18} /> Enviar à Cozinha</>
                         )}
-                    </button>
+                    </button>}
                 </div>
             )}
 

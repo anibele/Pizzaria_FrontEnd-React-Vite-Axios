@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useProdutosAtivos } from "../hooks/useProdutosAtivos";
 import { usePedidoMesaAberto } from "../hooks/usePedidoMesaAberto";
@@ -14,6 +14,7 @@ import PedidoMesa from "../componentes/PedidoMesa";
 import StandByPizzaria from "../pages/StandByPizzaria.tsx";
 import ManutencaoMesa from "../pages/ManutencaoMesa";
 import MesaReservada from "../pages/MesaReservada";
+import type { MesaDados } from "../interfaces/MesaDados";
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
 import { OnboardingProvider } from "../contexts/OnboardingContext";
 import { useOnboarding } from "../hooks/useOnboarding";
@@ -75,6 +76,7 @@ export default function CardapioCliente() {
     return (
         <OnboardingProvider statusMesa={determinarStatusOnboarding()}>
             <CardapioConteudo
+                key={`${user?.username}:${numeroMesa}`}
                 isStandBy={isStandBy}
                 setIsStandBy={setIsStandBy}
                 clienteIniciouSessao={clienteIniciouSessao}
@@ -91,7 +93,7 @@ interface CardapioConteudoProps {
     setIsStandBy: (v: boolean) => void;
     clienteIniciouSessao: boolean;
     setClienteIniciouSessao: (v: boolean) => void;
-    mesaStatusData: any;
+    mesaStatusData: MesaDados | undefined;
     numeroMesa: number;
 }
 
@@ -119,7 +121,10 @@ function CardapioConteudo({
     const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
     const { data: pedidoAtivo, isLoading: loadingPedido, refetch: refetchPedido } = usePedidoMesaAberto(numeroMesa);
     const { mutate: criarNovoPedido, isPending: criando } = usePedidoCriar();
-    const { mutate: adicionarItensAoPedido, isPending: adicionando } = usePedidoAdicionarItens();
+    const adicao = usePedidoAdicionarItens(numeroMesa);
+    const adicionando = adicao.enviando;
+    const existePendencia = !!adicao.pendente || adicao.bloqueada;
+    const envioEmCurso = useRef(false);
     const { mutate: finalizarPedido } = usePedidoFinalizar();
 
     useEffect(() => {
@@ -170,7 +175,7 @@ function CardapioConteudo({
     }, [isStandBy, setIsStandBy, mesaStatusData?.status, clienteIniciouSessao]);
 
     useEffect(() => {
-        if (mesaStatusData?.status === "LIVRE") {
+        if (mesaStatusData?.status === "LIVRE" && !existePendencia) {
             setClienteIniciouSessao(false);
             setIsStandBy(false);
             // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -180,9 +185,10 @@ function CardapioConteudo({
             setProdutoSelecionado(null);
             setCarrinho([]);
         }
-    }, [mesaStatusData?.status, setClienteIniciouSessao, setIsStandBy]);
+    }, [mesaStatusData?.status, setClienteIniciouSessao, setIsStandBy, existePendencia]);
 
     const handleAdicionarAoCarrinho = (produto: ProdutoDados) => {
+        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         setCarrinho((carrinhoAtual) => {
             const itemExistente = carrinhoAtual.find(item => item.produto.id === produto.id);
             if (itemExistente) {
@@ -195,6 +201,7 @@ function CardapioConteudo({
     };
 
     const handleRemoverOuDiminuir = (produtoId: number) => {
+        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         setCarrinho((carrinhoAtual) => {
             const item = carrinhoAtual.find(i => i.produto.id === produtoId);
             if (!item) return carrinhoAtual;
@@ -211,40 +218,27 @@ function CardapioConteudo({
 
     const limparCarrinho = () => setCarrinho([]);
 
-    const handleEnviarParaCozinha = () => {
-        if (carrinho.length === 0 || numeroMesa === 0) return;
-
-        if (pedidoAtivo) {
-            const itensPayload = carrinho.map(item => ({
-                produtoId: item.produto.id!,
-                quantidade: item.quantidade
-            }));
-
-            adicionarItensAoPedido({
-                pedidoId: pedidoAtivo.id,
-                numeroMesa: numeroMesa,
-                itens: itensPayload
-            }, {
-                onSuccess: () => {
+    const handleEnviarParaCozinha = async () => {
+        if (envioEmCurso.current || adicao.bloqueada || numeroMesa === 0) return;
+        if (!adicao.pendente && carrinho.length === 0) return;
+        envioEmCurso.current = true;
+        try {
+            if (adicao.pendente || pedidoAtivo) {
+                const itensPayload = carrinho.map(item => ({ produtoId: item.produto.id!, quantidade: item.quantidade }));
+                // O gestor ignora estes dados em retries e usa exclusivamente o snapshot salvo.
+                await adicao.enviar(adicao.pendente?.pedidoId ?? pedidoAtivo!.id, itensPayload, operacao => {
+                    localStorage.removeItem(`carrinho_mesa_${operacao.contexto.numeroMesa}`);
                     limparCarrinho();
-                }
-            });
-        } else {
-            const novoPedidoPayload = {
-                numeroMesa: numeroMesa,
-                formaPagamento: "PENDENTE",
-                itens: carrinho.map(item => ({
-                    produtoId: item.produto.id!,
-                    quantidade: item.quantidade
-                }))
-            };
-
-            criarNovoPedido(novoPedidoPayload, {
-                onSuccess: () => {
-                    limparCarrinho();
-                }
-            });
-        }
+                });
+            } else {
+                // Abertura continua no endpoint existente, sem Idempotency-Key.
+                await new Promise<void>((resolve) => {
+                    criarNovoPedido({ numeroMesa, formaPagamento: "PENDENTE",
+                        itens: carrinho.map(item => ({ produtoId: item.produto.id!, quantidade: item.quantidade }))
+                    }, { onSuccess: () => { limparCarrinho(); }, onSettled: () => resolve() });
+                });
+            }
+        } finally { envioEmCurso.current = false; }
     };
 
     const itensConsumidos = (pedidoAtivo?.itens as unknown as ItemPedidoResponse[]) || [];
@@ -252,6 +246,7 @@ function CardapioConteudo({
     const todosItensProntos = possuiItensConsumidos && itensConsumidos.every(item => item.status === "PRONTO");
 
     const handleSolicitarPagamento = () => {
+        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         if (carrinho.length > 0) {
             setIsModalAvisoOpen(true);
         } else {
@@ -261,6 +256,7 @@ function CardapioConteudo({
     };
 
     const handleDescartarEPagar = () => {
+        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         limparCarrinho();
         setIsModalAvisoOpen(false);
         setPagamentoSolicitado(false);
@@ -268,6 +264,7 @@ function CardapioConteudo({
     };
 
     const handleEnviarSolicitacaoPagamento = (formaPagamentoSelecionada: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
+        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         if (pedidoAtivo) {
             setPagamentoSolicitado(true);
             finalizarPedido({
@@ -288,15 +285,15 @@ function CardapioConteudo({
 
     const produtosCardapio = produtos?.filter(p => p.ativo) || [];
 
-    if (mesaStatusData?.status === "MANUTENCAO" || mesaStatusData?.ativo === false) {
+    if (!existePendencia && (mesaStatusData?.status === "MANUTENCAO" || mesaStatusData?.ativo === false)) {
         return <ManutencaoMesa />;
     }
 
-    if (mesaStatusData?.status === "RESERVADA") {
+    if (!existePendencia && mesaStatusData?.status === "RESERVADA") {
         return <MesaReservada />;
     }
 
-    if (mesaStatusData?.status === "LIVRE" && !clienteIniciouSessao) {
+    if (!existePendencia && mesaStatusData?.status === "LIVRE" && !clienteIniciouSessao) {
         return (
             <TelaInicio onIniciar={() => {
                 setClienteIniciouSessao(true);
@@ -350,6 +347,11 @@ function CardapioConteudo({
                         onEnviarParaCozinha={handleEnviarParaCozinha}
                         criando={criando}
                         adicionando={adicionando}
+                        adicaoPendente={existePendencia}
+                        mensagemAdicao={adicao.mensagem}
+                        reenvioPermitido={!!adicao.pendente && !adicao.bloqueada}
+                        podeRevisarAdicao={adicao.podeRevisar}
+                        onRevisarAdicao={adicao.revisarRejeitada}
                         pedidoAtivo={pedidoAtivo}
                         itensConsumidos={itensConsumidos}
                         possuiItensConsumidos={possuiItensConsumidos}

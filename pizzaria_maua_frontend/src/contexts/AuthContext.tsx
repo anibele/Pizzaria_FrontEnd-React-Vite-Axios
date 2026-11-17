@@ -1,6 +1,7 @@
 import { createContext, useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { garantirSessaoAdicao, encerrarSessaoAdicao } from '../services/sessaoAdicao';
 
 // Tipagem do usuário do sistema
 export interface User {
@@ -36,8 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (storedToken && storedUser) {
             try {
+                const usuario = JSON.parse(storedUser);
+                garantirSessaoAdicao(usuario);
                 // eslint-disable-next-line react-hooks/set-state-in-effect
-                setUser(JSON.parse(storedUser));
+                setUser(usuario);
             } catch (e) {
                 console.error("Erro ao ler usuário do localStorage, limpando...", e);
                 localStorage.clear();
@@ -54,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify({ username, role }));
 
+            garantirSessaoAdicao({ username, role }, true);
             setUser({ username, role });
 
             // --- CORREÇÃO DOS REDIRECIONAMENTOS ---
@@ -75,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const logout = (): void => {
+        encerrarSessaoAdicao();
         localStorage.clear();
         setUser(null);
         navigate('/login');
