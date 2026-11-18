@@ -21,6 +21,10 @@ interface EstadoAdicao {
 type Armazenamento = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 const mesmoContexto = (a: ContextoAdicao | null, b: ContextoAdicao | null) => !!a && !!b
     && a.username === b.username && a.role === b.role && a.sessao === b.sessao && a.numeroMesa === b.numeroMesa;
+// Somente rejeições reconhecidas no contrato autorizam abandonar esta intenção.
+const rejeicaoDefinitiva = (status: unknown, mensagem: unknown) => typeof mensagem === "string" && mensagem.length > 0
+    && (status === 400 || status === 404
+        || (status === 409 && /^(Estoque insuficiente|Apenas pedidos ABERTOS)/.test(mensagem)));
 
 export async function enviarAdicao(http: Pick<AxiosInstance, "put">, operacao: AdicaoPendente): Promise<PedidoDados> {
     const response = await http.put<PedidoDados>(`/pedidos/${operacao.pedidoId}/itens`, operacao.itens, {
@@ -44,6 +48,7 @@ export class GestorAdicao {
     private contextoAtual: () => ContextoAdicao | null;
     private gerarUUID: () => string;
     private incerta = false;
+    private rejeicaoPersistida: string | null = null;
     private listeners = new Set<() => void>();
     private estado: EstadoAdicao = { pendente: null, enviando: false, mensagem: null, podeRevisar: false, bloqueada: false };
 
@@ -56,8 +61,12 @@ export class GestorAdicao {
                 if (!mesmoContexto(op.contexto, contexto)) {
                     this.estado = { ...this.estado, bloqueada: true, mensagem: "Existe uma adição pendente de outra sessão ou mesa. Confira a comanda e solicite atendimento antes de continuar." };
                 } else {
-                    this.estado = { ...this.estado, pendente: snapshot(op.chave, op.pedidoId, op.itens, op.contexto), mensagem: MENSAGEM_INCERTA };
-                    this.incerta = true;
+                    const podeRevisar = rejeicaoDefinitiva(op.rejeicao?.status, op.rejeicao?.mensagem);
+                    this.estado = { ...this.estado, pendente: snapshot(op.chave, op.pedidoId, op.itens, op.contexto),
+                        podeRevisar, mensagem: podeRevisar ? op.rejeicao.mensagem : MENSAGEM_INCERTA };
+                    // Registros antigos ou sem evidência válida continuam incertos.
+                    this.incerta = !podeRevisar;
+                    if (podeRevisar) this.rejeicaoPersistida = raw;
                 }
             }
         } catch {
@@ -78,11 +87,18 @@ export class GestorAdicao {
         }
         // Antes do primeiro await: dois toques nao geram duas operacoes/chaves.
         this.atualizar({ enviando: true, podeRevisar: false });
+        this.rejeicaoPersistida = null;
         let preparada = false;
+        let registroEnvio: string | null = null;
         try {
             const op = this.estado.pendente ?? snapshot(this.gerarUUID(), pedidoId, itens, this.contexto);
             this.atualizar({ pendente: op, mensagem: null });
-            this.storage.setItem(CHAVE_ADICAO_PENDENTE, JSON.stringify(op));
+            // Remover a evidência anterior ANTES de reenviar: reload durante o PUT
+            // deve recuperar uma tentativa incerta, mesmo que a anterior foi rejeitada.
+            // Identifica a tentativa, sem alterar a chave da intenção. Uma rejeição
+            // antiga não pode liberar revisão se outra montagem já iniciou um retry.
+            registroEnvio = JSON.stringify({ ...op, tentativa: novoUUID() });
+            this.storage.setItem(CHAVE_ADICAO_PENDENTE, registroEnvio);
             preparada = true;
             await executar(op);
             if (!this.autorizado()) {
@@ -102,9 +118,24 @@ export class GestorAdicao {
             const status = resposta?.status;
             const mensagem = typeof resposta?.data?.mensagem === "string" ? resposta.data.mensagem : "Não foi possível adicionar os itens. Confira a comanda ou solicite atendimento.";
             const desconhecido = !status || status >= 500 || status === 408 || status === 429;
-            this.incerta ||= preparada && desconhecido;
-            const podeRevisar = !this.incerta && (status === 400 || status === 404
-                || (status === 409 && /^(Estoque insuficiente|Apenas pedidos ABERTOS)/.test(mensagem)));
+            const definitiva = rejeicaoDefinitiva(status, mensagem);
+            this.incerta ||= preparada && !definitiva;
+            const podeRevisar = preparada && !this.incerta && definitiva;
+            if (podeRevisar) {
+                try {
+                    const op = this.estado.pendente!;
+                    const salvo = this.storage.getItem(CHAVE_ADICAO_PENDENTE);
+                    // Uma resposta antiga não pode recriar uma pendência já confirmada
+                    // nem substituir a intenção de outra montagem.
+                    if (salvo !== registroEnvio) return;
+                    const registroRejeicao = JSON.stringify({ ...op, rejeicao: { status, mensagem } });
+                    this.storage.setItem(CHAVE_ADICAO_PENDENTE, registroRejeicao);
+                    this.rejeicaoPersistida = registroRejeicao;
+                } catch {
+                    this.incerta = true;
+                    this.atualizar({ podeRevisar: false, mensagem: "Não foi possível registrar a rejeição com segurança. Confira a comanda ou solicite atendimento." }); return;
+                }
+            }
             this.atualizar({ mensagem: !preparada ? "Não foi possível preparar o envio com segurança. Tente novamente." : desconhecido ? MENSAGEM_INCERTA : mensagem,
                 podeRevisar, bloqueada: status === 401 || status === 403 });
         } finally { this.atualizar({ enviando: false }); }
@@ -113,8 +144,20 @@ export class GestorAdicao {
     revisarRejeitada() {
         if (!this.estado.podeRevisar || this.estado.enviando || !this.autorizado()) return;
         try {
+            // Compara o registro integral que autorizou a revisão, já validado ao
+            // recuperar/persistir: chave, pedido, contexto, snapshot e rejeição.
+            // Na mesma aba, leitura, comparação e remoção não cedem execução.
+            if (!this.rejeicaoPersistida || this.storage.getItem(CHAVE_ADICAO_PENDENTE) !== this.rejeicaoPersistida) {
+                throw new Error("A evidência de rejeição mudou.");
+            }
             this.storage.removeItem(CHAVE_ADICAO_PENDENTE);
+            this.rejeicaoPersistida = null;
             this.atualizar({ pendente: null, podeRevisar: false, mensagem: null });
-        } catch { this.atualizar({ mensagem: "Não foi possível liberar a seleção com segurança. Tente novamente." }); }
+        } catch {
+            this.rejeicaoPersistida = null;
+            this.incerta = true;
+            this.atualizar({ podeRevisar: false, bloqueada: true,
+                mensagem: "Não foi possível validar a revisão com segurança. A pendência foi mantida nesta tela. Atualize a página e confira a comanda antes de continuar." });
+        }
     }
 }
