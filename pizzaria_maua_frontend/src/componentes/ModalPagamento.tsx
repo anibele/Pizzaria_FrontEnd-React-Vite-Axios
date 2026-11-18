@@ -1,61 +1,51 @@
-import { useState, useEffect } from "react";
-import { X, QrCode, CreditCard, Banknote, CheckCircle2 } from "lucide-react";
+import { X, QrCode, CreditCard, Banknote, CheckCircle2, Loader2 } from "lucide-react";
+import type { EstadoPagamento, FormaPagamento } from "../services/solicitacaoPagamento";
 import "../styles/modalPagamento.css";
 
 interface ModalPagamentoProps {
     isOpen: boolean;
     onClose: () => void;
-    onSolicitarPagamento: (forma: 'PIX' | 'CARTAO' | 'DINHEIRO') => void;
+    estado: EstadoPagamento;
+    onSolicitarPagamento: (forma: FormaPagamento) => Promise<void>;
+    onVerificarPedido: () => Promise<void>;
 }
 
-export default function ModalPagamento({ isOpen, onClose, onSolicitarPagamento }: ModalPagamentoProps) {
-    const [passo, setPasso] = useState<1 | 2>(1);
-
-    // Garante que o modal volte ao passo 1 silenciosamente caso a mesa seja resetada
-    useEffect(() => {
-        if (!isOpen) {
-            setTimeout(() => setPasso(1), 300);
-        }
-    }, [isOpen]);
-
+export default function ModalPagamento({ isOpen, onClose, estado, onSolicitarPagamento, onVerificarPedido }: ModalPagamentoProps) {
     if (!isOpen) return null;
-
-    const handleEscolherForma = (forma: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
-        onSolicitarPagamento(forma);
-        setPasso(2); // Avança e "tranca" a tela no passo 2
-    };
-
-    const handleFecharManualmente = () => {
-        onClose();
-    };
+    const processando = estado.fase === 'processando';
+    const sucesso = estado.fase === 'sucesso';
+    const podeSolicitar = estado.fase === 'selecao' || estado.fase === 'erro';
 
     return (
         <div className="modal-overlay">
-            <div className="modal-container">
+            <div className="modal-container" aria-busy={processando}>
 
-                {/* Botão de Fechar é renderizado APENAS no passo 1 */}
-                {passo === 1 && (
-                    <button onClick={handleFecharManualmente} className="btn-modal-fechar" title="Voltar ao Cardápio">
+                {!sucesso && (
+                    <button onClick={onClose} disabled={processando} className="btn-modal-fechar" title="Voltar ao Cardápio">
                         <X size={22} />
                     </button>
                 )}
 
-                {passo === 1 ? (
+                {!sucesso ? (
                     <>
                         <h2 className="modal-titulo">Como deseja pagar?</h2>
                         <p className="modal-subtitulo">Selecione a forma de pagamento abaixo:</p>
 
-                        <div className="opcoes-pagamento-container">
-                            <button className="btn-opcao-pagamento" onClick={() => handleEscolherForma("PIX")}>
+                        {processando && <p className="modal-subtitulo" role="status"><Loader2 className="animate-spin" size={20} /> {estado.mensagem}</p>}
+                        {!processando && estado.mensagem && <p className="modal-subtitulo" role="alert">{estado.mensagem}</p>}
+
+                        {(podeSolicitar || processando) && <div className="opcoes-pagamento-container">
+                            <button className="btn-opcao-pagamento" disabled={processando} onClick={() => { void onSolicitarPagamento("PIX"); }}>
                                 <QrCode size={20} /> Pix
                             </button>
-                            <button className="btn-opcao-pagamento" onClick={() => handleEscolherForma("CARTAO")}>
+                            <button className="btn-opcao-pagamento" disabled={processando} onClick={() => { void onSolicitarPagamento("CARTAO"); }}>
                                 <CreditCard size={20} /> Cartão (Crédito/Débito)
                             </button>
-                            <button className="btn-opcao-pagamento" onClick={() => handleEscolherForma("DINHEIRO")}>
+                            <button className="btn-opcao-pagamento" disabled={processando} onClick={() => { void onSolicitarPagamento("DINHEIRO"); }}>
                                 <Banknote size={20} /> Dinheiro
                             </button>
-                        </div>
+                        </div>}
+                        {estado.fase === 'verificar' && <button className="btn-opcao-pagamento" onClick={() => { void onVerificarPedido(); }}>Verificar pedido</button>}
                     </>
                 ) : (
                     <div className="sucesso-container">

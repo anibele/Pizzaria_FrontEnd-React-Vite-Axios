@@ -116,7 +116,6 @@ function CardapioConteudo({
     const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoDados | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isModalAvisoOpen, setIsModalAvisoOpen] = useState<boolean>(false);
-    const [pagamentoSolicitado, setPagamentoSolicitado] = useState<boolean>(false);
 
     const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
     const { data: pedidoAtivo, isLoading: loadingPedido, refetch: refetchPedido } = usePedidoMesaAberto(numeroMesa);
@@ -125,7 +124,8 @@ function CardapioConteudo({
     const adicionando = adicao.enviando;
     const existePendencia = !!adicao.pendente || adicao.bloqueada;
     const envioEmCurso = useRef(false);
-    const { mutate: finalizarPedido } = usePedidoFinalizar();
+    const pagamento = usePedidoFinalizar(numeroMesa);
+    const reiniciarPagamento = pagamento.reiniciar;
 
     useEffect(() => {
         if (numeroMesa > 0) {
@@ -181,11 +181,11 @@ function CardapioConteudo({
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsModalOpen(false);
             setIsModalAvisoOpen(false);
-            setPagamentoSolicitado(false);
+            reiniciarPagamento();
             setProdutoSelecionado(null);
             setCarrinho([]);
         }
-    }, [mesaStatusData?.status, setClienteIniciouSessao, setIsStandBy, existePendencia]);
+    }, [mesaStatusData?.status, setClienteIniciouSessao, setIsStandBy, existePendencia, reiniciarPagamento]);
 
     const handleAdicionarAoCarrinho = (produto: ProdutoDados) => {
         if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
@@ -250,7 +250,7 @@ function CardapioConteudo({
         if (carrinho.length > 0) {
             setIsModalAvisoOpen(true);
         } else {
-            setPagamentoSolicitado(false);
+            reiniciarPagamento();
             setIsModalOpen(true);
         }
     };
@@ -259,28 +259,18 @@ function CardapioConteudo({
         if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         limparCarrinho();
         setIsModalAvisoOpen(false);
-        setPagamentoSolicitado(false);
+        reiniciarPagamento();
         setIsModalOpen(true);
     };
 
-    const handleEnviarSolicitacaoPagamento = (formaPagamentoSelecionada: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
+    const handleEnviarSolicitacaoPagamento = async (formaPagamentoSelecionada: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
         if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
-        if (pedidoAtivo) {
-            setPagamentoSolicitado(true);
-            finalizarPedido({
-                pedidoId: pedidoAtivo.id,
-                numeroMesa: numeroMesa,
-                formaPagamento: formaPagamentoSelecionada
-            });
-        }
+        await pagamento.solicitar(pedidoAtivo?.id, formaPagamentoSelecionada);
     };
 
     const handleFechamentoModal = () => {
         setIsModalOpen(false);
-        if (pagamentoSolicitado) {
-            setClienteIniciouSessao(true);
-            setPagamentoSolicitado(false);
-        }
+        reiniciarPagamento();
     };
 
     const produtosCardapio = produtos?.filter(p => p.ativo) || [];
@@ -362,8 +352,10 @@ function CardapioConteudo({
 
                 <ModalPagamento
                     isOpen={isModalOpen}
+                    estado={pagamento}
                     onClose={handleFechamentoModal}
                     onSolicitarPagamento={handleEnviarSolicitacaoPagamento}
+                    onVerificarPedido={pagamento.verificar}
                 />
 
                 <ModalAvisoCarrinho
