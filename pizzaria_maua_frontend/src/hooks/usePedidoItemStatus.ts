@@ -1,22 +1,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
-
-interface AtualizarStatusParam {
-    itemId: number;
-    status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
-}
+import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { buscarPedidosCozinha, concluirItemCozinha, ConclusaoCozinha } from "../services/conclusaoCozinha";
 
 export function usePedidoItemStatus() {
     const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: async ({ itemId, status }: AtualizarStatusParam) => {
-            await api.patch(`/pedidos/itens/${itemId}/status`, null, {
-                params: { status }
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["pedidos-cozinha"] });
-        }
+    const { mutateAsync } = useMutation({
+        mutationFn: (itemId: number) => concluirItemCozinha(api, itemId),
+        retry: false,
+        networkMode: 'always',
     });
+    const gestor = useMemo(() => new ConclusaoCozinha(queryClient, {
+        concluir: itemId => mutateAsync(itemId),
+        consultar: signal => buscarPedidosCozinha(api, signal),
+    }), [queryClient, mutateAsync]);
+    const operacoes = useSyncExternalStore(gestor.assinar, gestor.obterEstado);
+    useEffect(() => () => gestor.limpar(), [gestor]);
+    return { operacoes, concluir: gestor.concluir, verificar: gestor.verificar };
 }
