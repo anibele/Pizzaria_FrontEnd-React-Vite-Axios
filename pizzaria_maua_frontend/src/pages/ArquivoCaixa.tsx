@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { usePedidosPorData } from "../hooks/useDadosArquivo";
 import { adaptarParaCaixa } from "../services/adapter";
-import { baixarComandaTxt } from "../services/gerarComandaTxt";
+import { imprimirComanda } from "../services/gerarComanda.ts";
 import { ModalDetalhesPedido } from "../componentes/ModalDetalhesPedido";
 import type { PedidoCaixaDados } from "../interfaces/PedidoDadosCaixa";
 
@@ -46,7 +46,7 @@ export default function ArquivoCaixa() {
 
     const handleBaixarTxt = (e: React.MouseEvent, pedido: PedidoCaixaDados) => {
         e.stopPropagation(); // Evita abrir o modal de detalhes acidentalmente
-        baixarComandaTxt(pedido);
+        imprimirComanda(pedido);
     };
 
     // --- TEMPLATES CUSTOMIZADOS PARA A DATA TABLE DO PRIMEREACT ---
@@ -78,7 +78,7 @@ export default function ArquivoCaixa() {
             <button
                 className="btn-tabela-acao baixar"
                 onClick={(e) => handleBaixarTxt(e, rowData)}
-                title="Baixar Comanda (.txt)"
+                title="Baixar Comanda"
             >
                 <FileDown size={16} />
             </button>
@@ -165,7 +165,7 @@ export default function ArquivoCaixa() {
                                     onClick={(e) => handleBaixarTxt(e, pedido)}
                                 >
                                     <FileDown size={16} />
-                                    Baixar TXT
+                                    Baixar Comanda
                                 </button>
                             </div>
                         </div>

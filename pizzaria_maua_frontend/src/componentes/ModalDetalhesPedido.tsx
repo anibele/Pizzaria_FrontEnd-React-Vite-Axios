@@ -1,6 +1,6 @@
 import { X, Printer } from "lucide-react";
 import type { PedidoCaixaDados } from "../interfaces/PedidoDadosCaixa"; // Novo import
-import { baixarComandaTxt } from "../services/gerarComandaTxt";
+import { imprimirComanda } from "../services/gerarComanda.ts";
 import "../styles/modaldetalhespedido.css";
 
 interface ModalDetalhesPedidoProps {
@@ -42,8 +42,8 @@ export function ModalDetalhesPedido({ isOpen, onClose, pedido }: ModalDetalhesPe
                         <span>Total Pago:</span>
                         <span className="valor-total">R$ {pedido.faturamento.toFixed(2)}</span>
                     </div>
-                    <button onClick={() => baixarComandaTxt(pedido)} className="btn-imprimir">
-                        <Printer size={20} /> Imprimir Comanda (.txt)
+                    <button onClick={() => imprimirComanda(pedido)} className="btn-imprimir">
+                        <Printer size={20} /> Imprimir Comanda
                     </button>
                 </div>
             </div>
