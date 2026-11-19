@@ -22,14 +22,16 @@ export function novoUUID(fonte: Crypto = globalThis.crypto): string {
     return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-export function garantirSessaoAdicao(user: { username: string; role: string }, nova = false): void {
+export function garantirSessaoAdicao(user: { username: string; role: string }, nova = false): boolean {
     try {
         const salvo = JSON.parse(localStorage.getItem(CHAVE_SESSAO_ADICAO) || "null");
-        if (!nova && salvo?.username === user.username && salvo?.role === user.role && typeof salvo.sessao === "string") return;
+        if (!nova && salvo?.username === user.username && salvo?.role === user.role && typeof salvo.sessao === "string") return true;
         localStorage.removeItem(CHAVE_SESSAO_ADICAO); // Nao conservar nonce antigo se a gravacao falhar.
-        localStorage.setItem(CHAVE_SESSAO_ADICAO, JSON.stringify({ username: user.username, role: user.role, sessao: novoUUID() }));
+        const registro = JSON.stringify({ username: user.username, role: user.role, sessao: novoUUID() });
+        localStorage.setItem(CHAVE_SESSAO_ADICAO, registro);
+        return localStorage.getItem(CHAVE_SESSAO_ADICAO) === registro;
         // Uma pendencia de outra sessao permanece bloqueada, nunca e reutilizada.
-    } catch { /* Armazenamento indisponivel bloqueia adicoes, sem alterar o login. */ }
+    } catch { return false; }
 }
 
 export function contextoAtualAdicao(numeroMesa: number): ContextoAdicao | null {

@@ -13,6 +13,7 @@ interface AuthContextType {
     login: (username: string, senha: string) => Promise<void>;
     logout: () => void;
     loading: boolean;
+    versaoSessao: number;
     erroSessao: string | null;
     podeRecuperarSessao: boolean;
     revalidarSessao: () => Promise<void>;
@@ -33,8 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }); }, [gestor, navigate]);
     const estado = useSyncExternalStore(gestor.assinar, gestor.obterEstado);
     useEffect(() => { gestor.ativar(); return gestor.parar; }, [gestor]);
+    useEffect(() => gestor.observarArmazenamento(window, localStorage), [gestor]);
     return <AuthContext.Provider value={{ authenticated: !!estado.user, user: estado.user, loading: estado.loading,
-        login: gestor.login, logout: gestor.logout, erroSessao: estado.erro,
+        login: gestor.login, logout: gestor.logout, erroSessao: estado.erro, versaoSessao: estado.versao,
         podeRecuperarSessao: estado.podeRecuperar, revalidarSessao: gestor.revalidar }}>
         {children}
     </AuthContext.Provider>;

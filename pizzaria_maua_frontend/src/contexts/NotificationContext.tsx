@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { Bell, PlusCircle, DollarSign, X } from "lucide-react";
 import { AuthContext } from "./AuthContext"; // Confirme o caminho
+import { controleHttpSessao } from '../services/httpSessao';
 import "../styles/notification.css";
 
 export type NotificationType = "NOVO_PEDIDO" | "ITENS_ADICIONADOS" | "PAGAMENTO";
@@ -10,6 +11,7 @@ export interface NotificationItem {
     type: NotificationType;
     title: string;
     message: string;
+    sessao: number;
 }
 
 interface NotificationContextData {
@@ -19,10 +21,20 @@ interface NotificationContextData {
 const NotificationContext = createContext<NotificationContextData>({} as NotificationContextData);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-    const { user } = useContext(AuthContext);
+    const { user, versaoSessao } = useContext(AuthContext);
     const [fila, setFila] = useState<NotificationItem[]>([]);
     const [notificacaoAtiva, setNotificacaoAtiva] = useState<NotificationItem | null>(null);
     const [isExiting, setIsExiting] = useState(false);
+    const fechamento = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const audioAtual = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFila(prev => prev.filter(item => item.sessao === versaoSessao));
+        setNotificacaoAtiva(prev => prev?.sessao === versaoSessao ? prev : null);
+        setIsExiting(false);
+        return () => { clearTimeout(fechamento.current); audioAtual.current?.pause(); };
+    }, [versaoSessao]);
 
     const tocarSom = (type: NotificationType) => {
         let audioPath = "";
@@ -34,11 +46,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         if (audioPath) {
             const audio = new Audio(audioPath);
-            audio.play().catch((err) => console.log("Áudio bloqueado:", err));
+            audioAtual.current = audio;
+            void audio.play().catch(() => { /* O navegador pode exigir interação para liberar áudio. */ });
         }
     };
 
     const adicionarNotificacao = useCallback((type: NotificationType, mesa: number, detalhes?: string) => {
+        if (!user || controleHttpSessao.geracao !== versaoSessao) return;
         let title = "";
         let message = "";
 
@@ -62,12 +76,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             type,
             title,
             message,
+            sessao: versaoSessao,
         }]);
-    }, []);
+    }, [user, versaoSessao]);
 
     useEffect(() => {
         if (!notificacaoAtiva && fila.length > 0) {
             const proxima = fila[0];
+            if (!user || proxima.sessao !== versaoSessao) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
+                setFila(prev => prev.slice(1));
+                return;
+            }
             const ehPagamento = proxima.type === "PAGAMENTO";
 
             // CORREÇÃO: Permite que Caixa ou Gerente vejam, com ou sem o prefixo ROLE_
@@ -76,7 +96,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             const ehAutorizado = cargosPermitidos.includes(cargoUsuario);
 
             if (ehPagamento && !ehAutorizado) {
-                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setFila((prev) => prev.slice(1));
             } else {
                 setNotificacaoAtiva(proxima);
@@ -85,7 +104,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 tocarSom(proxima.type);
             }
         }
-    }, [fila, notificacaoAtiva, user]);
+    }, [fila, notificacaoAtiva, user, versaoSessao]);
 
     useEffect(() => {
         if (notificacaoAtiva) {
@@ -102,7 +121,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const fecharManualmente = () => {
         setIsExiting(true);
         // CORREÇÃO: Diminuído de 4000 (4 segundos) para 400ms (tempo exato do CSS)
-        setTimeout(() => {
+        clearTimeout(fechamento.current);
+        fechamento.current = setTimeout(() => {
             setNotificacaoAtiva(null);
         }, 400);
     };
@@ -118,7 +138,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return (
         <NotificationContext.Provider value={{ adicionarNotificacao }}>
             {children}
-            {notificacaoAtiva && (
+            {user && notificacaoAtiva?.sessao === versaoSessao && (
                 <div className={`notif-overlay-container ${isExiting ? "exit" : "enter"}`}>
                     <div className={`notif-card ${notificacaoAtiva.type.toLowerCase()}`}>
                         <div className="notif-icon-wrapper">
