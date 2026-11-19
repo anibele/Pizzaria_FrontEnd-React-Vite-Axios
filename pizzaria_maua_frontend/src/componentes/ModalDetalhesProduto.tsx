@@ -2,6 +2,7 @@ import type { ProdutoDados } from "../interfaces/ProdutoDados";
 import { X, Clock, Leaf, Egg, Utensils } from "lucide-react";
 
 import "../styles/modalDetalhes.css";
+import { useDialogo } from '../hooks/useDialogo';
 
 interface ModalDetalhesProdutoProps {
     produto: ProdutoDados | null;
@@ -9,14 +10,15 @@ interface ModalDetalhesProdutoProps {
 }
 
 export default function ModalDetalhesProduto({ produto, onClose }: ModalDetalhesProdutoProps) {
+    const [dialogoRef, tituloId, fecharDialogo] = useDialogo(!!produto, onClose);
     if (!produto) return null;
 
     const detalhes = produto.descricao;
     const ehVegano = detalhes?.pratoVegano === true;
 
     return (
-        <div className="modal-detalhes-overlay" onClick={onClose}>
-            <div className="modal-detalhes-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-detalhes-overlay" onClick={fecharDialogo}>
+            <div ref={dialogoRef} className="modal-detalhes-card dialogo-acessivel" role="dialog" aria-modal="true" aria-labelledby={tituloId} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
 
                 {/* Botão Superior de Fechamento */}
                 <button className="modal-detalhes-fechar" onClick={onClose} title="Fechar visualização">
@@ -29,7 +31,7 @@ export default function ModalDetalhesProduto({ produto, onClose }: ModalDetalhes
                 {/* Corpo do Card com as informações organizadas */}
                 <div className="modal-detalhes-corpo">
 
-                    <h2 className="modal-detalhes-titulo">{produto.nome}</h2>
+                    <h2 id={tituloId} className="modal-detalhes-titulo">{produto.nome}</h2>
                     <p className="modal-detalhes-preco">R$ {produto.precoBase.toFixed(2)}</p>
 
                     {/* Exibição da Breve Descrição Comercial */}

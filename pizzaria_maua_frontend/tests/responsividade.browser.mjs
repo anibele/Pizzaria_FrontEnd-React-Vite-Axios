@@ -128,7 +128,7 @@ try {
         await navegar('GERENTE', '/mesas'); await aguardar('.grid-mesas .card-mesa');
         const menu = await avaliar(`({scroll:document.documentElement.scrollWidth,links:[...document.querySelectorAll('.menu-gerente-link')].map(e=>e.getBoundingClientRect().toJSON())})`);
         resultados.push({ tela: 'menu', w, h, ...menu }); verificar(menu.scroll <= w && menu.links.length === 5 && menu.links.every(r => r.left >= 0 && r.right <= w), `Menu acessível ${w}`, menu);
-        await avaliar(`[...document.querySelectorAll('div')].find(e=>e.style.width==='56px').click()`); await pausa(100);
+        await avaliar(`document.querySelector('.nav-avatar').click()`); await pausa(100);
         const dropdown = await avaliar(`(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.textContent.includes('Logout'));const r=e.getBoundingClientRect();return{rect:r.toJSON(),clicavel:e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}})()`);
         resultados.push({ tela: 'dropdown', w, h, ...dropdown }); verificar(dropdown.clicavel && dropdown.rect.left >= 0 && dropdown.rect.right <= w, `Dropdown clicável ${w}`, dropdown);
         if (w === 390) await captura('dropdown-390');

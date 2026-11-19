@@ -181,13 +181,14 @@ function CardapioConteudo({
             }, 3 * 60 * 1000);
         };
 
-        const eventosInteracao = ["mousemove", "mousedown", "touchstart", "click", "scroll"];
+        const eventosInteracao = ["mousemove", "mousedown", "touchstart", "click", "scroll", "keydown"];
         resetarCronometro();
-        eventosInteracao.forEach(evento => window.addEventListener(evento, resetarCronometro));
+        // Captura teclado antes que diálogos interrompam Escape; os demais eventos mantêm a fase original.
+        eventosInteracao.forEach(evento => window.addEventListener(evento, resetarCronometro, evento === 'keydown'));
 
         return () => {
             clearTimeout(inactivityTimer);
-            eventosInteracao.forEach(evento => window.removeEventListener(evento, resetarCronometro));
+            eventosInteracao.forEach(evento => window.removeEventListener(evento, resetarCronometro, evento === 'keydown'));
         };
     }, [isStandBy, setIsStandBy, mesaStatusData?.status, clienteIniciouSessao]);
 

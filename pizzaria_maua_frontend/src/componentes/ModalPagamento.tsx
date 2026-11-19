@@ -1,6 +1,7 @@
 import { X, QrCode, CreditCard, Banknote, CheckCircle2, Loader2 } from "lucide-react";
 import type { EstadoPagamento, FormaPagamento } from "../services/solicitacaoPagamento";
 import "../styles/modalPagamento.css";
+import { useDialogo } from '../hooks/useDialogo';
 
 interface ModalPagamentoProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface ModalPagamentoProps {
 }
 
 export default function ModalPagamento({ isOpen, onClose, estado, onSolicitarPagamento, onVerificarPedido }: ModalPagamentoProps) {
+    const [dialogoRef, tituloId, fecharDialogo] = useDialogo(isOpen, onClose, estado.fase !== 'processando' && estado.fase !== 'sucesso');
     if (!isOpen) return null;
     const processando = estado.fase === 'processando';
     const sucesso = estado.fase === 'sucesso';
@@ -18,17 +20,17 @@ export default function ModalPagamento({ isOpen, onClose, estado, onSolicitarPag
 
     return (
         <div className="modal-overlay">
-            <div className="modal-container" aria-busy={processando}>
+            <div ref={dialogoRef} className="modal-container dialogo-acessivel" role="dialog" aria-modal="true" aria-labelledby={tituloId} tabIndex={-1} aria-busy={processando}>
 
                 {!sucesso && (
-                    <button onClick={onClose} disabled={processando} className="btn-modal-fechar" title="Voltar ao Cardápio">
+                    <button onClick={fecharDialogo} disabled={processando} className="btn-modal-fechar" title="Voltar ao Cardápio">
                         <X size={22} />
                     </button>
                 )}
 
                 {!sucesso ? (
                     <>
-                        <h2 className="modal-titulo">Como deseja pagar?</h2>
+                        <h2 id={tituloId} className="modal-titulo">Como deseja pagar?</h2>
                         <p className="modal-subtitulo">Selecione a forma de pagamento abaixo:</p>
 
                         {processando && <p className="modal-subtitulo" role="status"><Loader2 className="animate-spin" size={20} /> {estado.mensagem}</p>}
@@ -52,7 +54,7 @@ export default function ModalPagamento({ isOpen, onClose, estado, onSolicitarPag
                         <div className="sucesso-icone-wrapper">
                             <CheckCircle2 size={56} strokeWidth={2.5} />
                         </div>
-                        <h2 className="modal-titulo" style={{ color: "#2e7d32" }}>Aguarde...</h2>
+                        <h2 id={tituloId} className="modal-titulo" style={{ color: "#2e7d32" }}>Aguarde...</h2>
                         <p className="sucesso-texto">
                             Sua solicitação foi enviada para o caixa!
                         </p>

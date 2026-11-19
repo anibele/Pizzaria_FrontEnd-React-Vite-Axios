@@ -1,6 +1,7 @@
 import { AlertTriangle, Wrench, Trash2, X } from "lucide-react";
 import type { EstadoAcaoMesa } from "../services/acoesMesa";
 import "../styles/modalAcoesMesa.css";
+import { useDialogo } from '../hooks/useDialogo';
 
 interface ModalAcoesMesaProps {
     isOpen: boolean;
@@ -13,18 +14,19 @@ interface ModalAcoesMesaProps {
 }
 
 export function ModalAcoesMesa({ isOpen, onClose, numeroMesa, onDesativar, onExcluir, estado, onVerificar }: ModalAcoesMesaProps) {
+    const [dialogoRef, tituloId, fecharDialogo] = useDialogo(isOpen, onClose, !estado.processando);
     if (!isOpen) return null;
     const bloquearAcoes = estado.processando || estado.verificar || estado.sucesso;
 
     return (
         <div className="overlay-modal">
-            <div className="modal-conteudo modal-acoes-mesa animate-scale-up" aria-busy={estado.processando}>
+            <div ref={dialogoRef} className="modal-conteudo modal-acoes-mesa animate-scale-up dialogo-acessivel" role="dialog" aria-modal="true" aria-labelledby={tituloId} tabIndex={-1} aria-busy={estado.processando}>
                 <div className="modal-acoes-header">
                     <div className="icone-alerta-wrapper">
                         <AlertTriangle size={22} className="icone-alerta-modal" />
                     </div>
-                    <h3>Gerenciar Remoção da Mesa {numeroMesa}</h3>
-                    <button className="btn-fechar-modal-X" onClick={onClose} disabled={estado.processando}>
+                    <h3 id={tituloId}>Gerenciar Remoção da Mesa {numeroMesa}</h3>
+                    <button className="btn-fechar-modal-X" aria-label="Fechar ações da mesa" onClick={fecharDialogo} disabled={estado.processando}>
                         <X size={20} />
                     </button>
                 </div>
@@ -62,7 +64,7 @@ export function ModalAcoesMesa({ isOpen, onClose, numeroMesa, onDesativar, onExc
 
                 <div className="modal-acoes-rodape">
                     {estado.verificar && <button className="btn-cancelar-modal" onClick={onVerificar} disabled={estado.processando}>Verificar mesa</button>}
-                    <button className="btn-cancelar-modal" onClick={onClose} disabled={estado.processando}>
+                    <button className="btn-cancelar-modal" onClick={fecharDialogo} disabled={estado.processando}>
                         {estado.sucesso ? 'Fechar' : 'Cancelar'}
                     </button>
                 </div>

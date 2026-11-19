@@ -1,5 +1,6 @@
 import { AlertTriangle, Trash2, ArrowLeft } from "lucide-react";
 import "../styles/modalAvisoCarrinho.css";
+import { useDialogo } from '../hooks/useDialogo';
 
 interface ModalAvisoCarrinhoProps {
     isOpen: boolean;
@@ -8,16 +9,17 @@ interface ModalAvisoCarrinhoProps {
 }
 
 export default function ModalAvisoCarrinho({ isOpen, onClose, onConfirmarPagamento }: ModalAvisoCarrinhoProps) {
+    const [dialogoRef, tituloId] = useDialogo(isOpen, onClose);
     if (!isOpen) return null;
 
     return (
         <div className="modal-overlay">
-            <div className="modal-aviso-content">
+            <div ref={dialogoRef} className="modal-aviso-content dialogo-acessivel" role="dialog" aria-modal="true" aria-labelledby={tituloId} tabIndex={-1}>
                 <div className="modal-aviso-header">
                     <div className="icon-warning-bg">
                         <AlertTriangle size={32} color="#e65100" />
                     </div>
-                    <h2>Atenção aos itens no carrinho!</h2>
+                    <h2 id={tituloId}>Atenção aos itens no carrinho!</h2>
                 </div>
 
                 <div className="modal-aviso-body">

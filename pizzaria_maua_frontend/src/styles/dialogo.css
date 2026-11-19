@@ -1,0 +1,8 @@
+.dialogo-acessivel:focus { outline: none; }
+.dialogo-acessivel button:focus-visible,
+.nav-avatar:focus-visible,
+.btn-detalhes:focus-visible,
+.btn-deletar-mesa:focus-visible {
+    outline: 3px solid #b91c1c;
+    outline-offset: 3px;
+}

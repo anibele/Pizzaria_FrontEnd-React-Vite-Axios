@@ -1,4 +1,7 @@
 .tela-inicio-fullscreen-container {
+    border: 0;
+    padding: 0;
+    margin: 0;
     position: fixed;
     top: 0;
     left: 0;
@@ -9,6 +12,11 @@
     cursor: pointer;
     overflow: hidden;
     user-select: none;
+}
+
+.tela-inicio-fullscreen-container:focus-visible {
+    outline: 3px solid white;
+    outline-offset: -6px;
 }
 
 .tela-inicio-imagem {
