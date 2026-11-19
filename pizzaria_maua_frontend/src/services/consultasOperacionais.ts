@@ -1,5 +1,6 @@
 import type { AxiosInstance } from 'axios';
-import type { PedidoCaixaDados } from '../interfaces/PedidoDadosCaixa';
+import type { PedidoDados } from '../interfaces/PedidoDados';
+import { adaptarParaCaixa } from './adapter';
 
 interface ResumoDTO { faturamento: number; ticketMedio: number; tempoMedioCozinhaMinutos: number; taxaBebidas: number }
 interface VendasHoraDTO { hora: number; quantidadePedidos: number }
@@ -11,8 +12,9 @@ interface RankingsDTO {
 
 // Erros HTTP permanecem rejeições. Lista vazia e zero só vêm de respostas válidas.
 export async function consultarArquivo(http: Pick<AxiosInstance, 'get'>, data: string, signal: AbortSignal) {
-    const resposta = await http.get<PedidoCaixaDados[]>('/pedidos/finalizados', { params: { data }, signal });
+    const resposta = await http.get<PedidoDados[]>('/pedidos/finalizados', { params: { data }, signal });
     if (!Array.isArray(resposta.data)) throw new Error('Resposta de arquivo inválida.');
+    resposta.data.forEach(adaptarParaCaixa);
     return resposta.data;
 }
 export async function consultarFaturamento(http: Pick<AxiosInstance, 'get'>, data: string, signal: AbortSignal) {

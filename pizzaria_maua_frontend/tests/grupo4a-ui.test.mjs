@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { consultarArquivo, consultarFaturamento, consultarDashboard } from '../src/services/consultasOperacionais.ts';
+import { dataFinanceira } from '../src/services/dataFinanceira.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
@@ -25,7 +26,7 @@ const { default: Arquivo } = await import('../src/pages/ArquivoCaixa.tsx');
 const { default: Caixa } = await import('../src/pages/DashboardCaixa.tsx');
 const { default: Painel } = await import('../src/pages/PainelAnalitico.tsx');
 const { default: Cardapio } = await import('../src/routes/CardapioCliente.tsx');
-const hoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const hoje = dataFinanceira;
 function cache(t) {
     // Preserva o erro já resolvido no snapshot SSR, sem um retry otimista de montagem.
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false, gcTime: Infinity } } });
@@ -56,13 +57,24 @@ test('FE013 UI: erro de fila no caixa nao afirma ausencia de movimento', async t
     const html = renderizar(Caixa,c);
     assert.match(html,/Não foi possível atualizar os pedidos do caixa/); assert.doesNotMatch(html,/Nenhum movimento no momento|Confirmar Recebimento/);
 });
+
+test('FE014: DTO invalido vira erro de consulta no arquivo e no caixa, sem quebrar a renderizacao', async t => {
+    const invalido = { id: 1, numeroMesa: 7, status: 'AGUARDANDO_PAGAMENTO', itens: [{}] };
+    const arquivo = cache(t);
+    await assert.rejects(arquivo.fetchQuery({ queryKey: ['pedidos','finalizados',hoje()],
+        queryFn: () => consultarArquivo({ get: async () => ({ data: [invalido] }) }, hoje(), new AbortController().signal) }), /incompatíveis/);
+    assert.match(renderizar(Arquivo,arquivo), /Não foi possível consultar/);
+    const caixa = cache(t);
+    caixa.setQueryData(['pedidos-cozinha'],[invalido]);
+    assert.match(renderizar(Caixa,caixa), /Não foi possível atualizar os pedidos do caixa/);
+});
 test('FE013 UI: falha de faturamento nao e mostrada como zero', async t => {
     const c = cache(t); c.setQueryData(['pedidos-cozinha'],[]); await rejeitar(c,['faturamento',hoje()]);
     const html = renderizar(Caixa,c);
     assert.match(html,/Indisponível/); assert.match(html,/Atualizar faturamento/); assert.doesNotMatch(html,/R\$ 0\.00/);
 });
 test('FE013 UI: painel nao apresenta indicadores financeiros ficticios apos erro', async t => {
-    const c = cache(t); await rejeitar(c,['dashboard-indicadores']);
+    const c = cache(t); await rejeitar(c,['dashboard-indicadores',hoje()]);
     const html = renderizar(Painel,c,'GERENTE');
     assert.match(html,/Não foi possível carregar os indicadores/); assert.doesNotMatch(html,/Faturamento Hoje|R\$/);
 });

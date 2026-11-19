@@ -1,30 +1,12 @@
+import type { PedidoDados } from '../interfaces/PedidoDados';
 import { UtensilsCrossed, Check, Loader2, RefreshCw } from "lucide-react";
 import type { EstadoConclusaoItem } from "../services/conclusaoCozinha";
 import BadgeTimerKds from "./BadgeTimerKds";
 import { calcularPrioridadeKds, type KdsStatus } from "../services/kdsCalculadora";
 import "../styles/cardPedidoCozinha.css";
 
-interface ItemPedidoCozinha {
-    id: number;
-    produtoId: number;
-    produtoNome: string;
-    quantidade: number;
-    precoUnitario: number;
-    status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
-    dataHoraInclusao: string;
-    tempoPreparoMinutos: number;
-}
-
-interface PedidoCozinhaDados {
-    id: number;
-    numeroMesa: number;
-    dataHora: string;
-    formaPagamento: string;
-    itens: ItemPedidoCozinha[];
-}
-
 interface CardPedidoCozinhaProps {
-    pedido: PedidoCozinhaDados;
+    pedido: PedidoDados;
     operacoes: Record<number, EstadoConclusaoItem>;
     onMarcarComoEntregue: (itemId: number) => void;
     onVerificar: (itemId: number) => void;

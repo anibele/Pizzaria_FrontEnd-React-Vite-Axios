@@ -1,3 +1,4 @@
+import type { PedidoDados } from '../interfaces/PedidoDados';
 import { useState, useEffect, useRef } from "react";
 import { usePedidosCozinha } from "../hooks/usePedidosCozinha";
 import { usePedidoItemStatus } from "../hooks/usePedidoItemStatus";
@@ -8,26 +9,6 @@ import { Loader2, AlertCircle, CheckCircle2, BrickWallFire, Zap } from "lucide-r
 import { calcularPrioridadeKds } from "../services/kdsCalculadora";
 import "../styles/pedidosCozinha.css";
 
-interface ItemPedidoCozinha {
-    id: number;
-    produtoId: number;
-    produtoNome: string;
-    quantidade: number;
-    precoUnitario: number;
-    status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
-    dataHoraInclusao: string;
-    tempoPreparoMinutos: number;
-}
-
-interface PedidoCozinhaDados {
-    id: number;
-    numeroMesa: number;
-    dataHora: string;
-    status: "ABERTO" | "AGUARDANDO_PAGAMENTO" | "FINALIZADO";
-    formaPagamento: string;
-    itens: ItemPedidoCozinha[];
-}
-
 const LIMITE_MINUTOS_RAPIDO = 15;
 
 export default function PedidosCozinha() {
@@ -37,10 +18,10 @@ export default function PedidosCozinha() {
 
     const [, setTickTempo] = useState(0);
 
-    const prevPedidosRef = useRef<PedidoCozinhaDados[]>([]);
+    const prevPedidosRef = useRef<PedidoDados[]>([]);
     const isFirstLoadRef = useRef(true);
 
-    const pedidosOriginais = (data as unknown as PedidoCozinhaDados[]) || [];
+    const pedidosOriginais = data ?? [];
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -51,7 +32,7 @@ export default function PedidosCozinha() {
 
     useEffect(() => {
         if (isLoading || isError || !data) return;
-        const novosPedidos = data as unknown as PedidoCozinhaDados[];
+        const novosPedidos = data;
 
         if (isFirstLoadRef.current) {
             prevPedidosRef.current = novosPedidos;
@@ -69,7 +50,7 @@ export default function PedidosCozinha() {
                     adicionarNotificacao("ITENS_ADICIONADOS", newPedido.numeroMesa);
                 }
                 if (newPedido.status === "AGUARDANDO_PAGAMENTO" && oldPedido.status !== "AGUARDANDO_PAGAMENTO") {
-                    adicionarNotificacao("PAGAMENTO", newPedido.numeroMesa, newPedido.formaPagamento);
+                    adicionarNotificacao("PAGAMENTO", newPedido.numeroMesa, newPedido.formaPagamento ?? undefined);
                 }
             }
         });

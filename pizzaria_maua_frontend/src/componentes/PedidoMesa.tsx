@@ -1,21 +1,14 @@
+import type { ItemPedidoDados } from '../interfaces/PedidoDados';
 import { ClipboardList, Minus, Plus, Loader2, ChefHat } from "lucide-react";
 import ComandaMesa from "./ComandaMesa"; // Importando o novo componente de histórico
 import type { PedidoDados } from "../interfaces/PedidoDados";
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
+import { produtoDisponivel } from '../services/regrasCardapio';
 import "../styles/pedidoMesa.css";
 
 interface ItemCarrinho {
     produto: ProdutoDados;
     quantidade: number;
-}
-
-interface ItemPedidoResponse {
-    id: number;
-    produtoId: number;
-    produtoNome: string;
-    quantidade: number;
-    precoUnitario: number;
-    status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
 }
 
 interface PedidoMesaProps {
@@ -32,10 +25,14 @@ interface PedidoMesaProps {
     onRevisarAdicao: () => void;
     onVerificarAbertura?: () => void;
     pedidoAtivo: PedidoDados | null | undefined;
-    itensConsumidos: ItemPedidoResponse[];
+    itensConsumidos: ItemPedidoDados[];
     possuiItensConsumidos: boolean;
     todosItensProntos: boolean;
     onAbrirPagamento: () => void;
+    motivoBloqueio?: string | null;
+    motivoEstoque?: string | null;
+    produtosAtuais?: ProdutoDados[];
+    pagamentoPermitido?: boolean;
 }
 
 export default function PedidoMesa({
@@ -55,7 +52,8 @@ export default function PedidoMesa({
                                        itensConsumidos,
                                        possuiItensConsumidos,
                                        todosItensProntos,
-                                       onAbrirPagamento
+                                       onAbrirPagamento,
+                                       motivoBloqueio = null, motivoEstoque = null, produtosAtuais, pagamentoPermitido = true
                                    }: PedidoMesaProps) {
 
     // Total dos itens que estão apenas no carrinho atual
@@ -79,6 +77,7 @@ export default function PedidoMesa({
             <p className="pedido-subtitulo">{onVerificarAbertura
                 ? "Seleção protegida enquanto conferimos a abertura."
                 : "Estes itens ainda não foram para a cozinha."}</p>
+            {!adicaoPendente && (motivoBloqueio || motivoEstoque) && <p role="status">{motivoBloqueio || motivoEstoque}</p>}
 
             {(adicaoPendente || mensagemAdicao) && (
                 <div className="carrinho-conteudo" aria-live="polite" role="status">
@@ -114,7 +113,9 @@ export default function PedidoMesa({
                                     <button className="btn-qty" disabled={adicaoPendente || criando || adicionando} onClick={() => onRemoverOuDiminuir(item.produto.id!)} title="Diminuir">
                                         <Minus size={14} />
                                     </button>
-                                    <button className="btn-qty" disabled={adicaoPendente || criando || adicionando} onClick={() => onAdicionarAoCarrinho(item.produto)} title="Aumentar">
+                                    <button className="btn-qty" disabled={adicaoPendente || criando || adicionando || !!motivoBloqueio
+                                        || (produtosAtuais !== undefined && !produtoDisponivel(produtosAtuais.find(p => p.id === item.produto.id), item.quantidade + 1))}
+                                        onClick={() => onAdicionarAoCarrinho(item.produto)} title="Aumentar">
                                         <Plus size={14} />
                                     </button>
                                 </div>
@@ -137,7 +138,7 @@ export default function PedidoMesa({
 
                     {!adicaoPendente && <button
                         onClick={onEnviarParaCozinha}
-                        disabled={criando || adicionando}
+                        disabled={criando || adicionando || !!motivoBloqueio || !!motivoEstoque}
                         className="btn btn-primary"
                         data-tour="step-4">
                         {criando || adicionando ? (
@@ -155,6 +156,8 @@ export default function PedidoMesa({
                     itensConsumidos={itensConsumidos}
                     todosItensProntos={todosItensProntos}
                     onAbrirPagamento={onAbrirPagamento}
+                    pagamentoPermitido={pagamentoPermitido && !adicaoPendente}
+                    aguardandoPagamento={pedidoAtivo.status === 'AGUARDANDO_PAGAMENTO'}
                 />
             )}
         </div>

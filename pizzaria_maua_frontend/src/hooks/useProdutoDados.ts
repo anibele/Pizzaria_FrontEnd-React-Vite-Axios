@@ -1,9 +1,9 @@
 import api from "../services/api";
 import { useQuery } from "@tanstack/react-query";
-import type { ProdutoDados } from "../interfaces/ProdutoDados";
+import type { ProdutoResposta } from "../interfaces/ProdutoDados";
 
-const buscarDados = async (): Promise<ProdutoDados[]> => {
-    const response = await api.get<ProdutoDados[]>('/produtos');
+const buscarDados = async (): Promise<ProdutoResposta[]> => {
+    const response = await api.get<ProdutoResposta[]>('/produtos');
     return response.data;
 };
 

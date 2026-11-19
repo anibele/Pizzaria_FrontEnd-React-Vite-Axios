@@ -8,17 +8,10 @@ interface ModalDetalhesProdutoProps {
     onClose: () => void;
 }
 
-interface DescricaoEstruturada {
-    breveDescricao: string;
-    tempoMedioPreparo: string;
-    pratoVegano: boolean;
-    ingredientes: string[];
-}
-
 export default function ModalDetalhesProduto({ produto, onClose }: ModalDetalhesProdutoProps) {
     if (!produto) return null;
 
-    const detalhes = produto.descricao as unknown as DescricaoEstruturada | undefined;
+    const detalhes = produto.descricao;
     const ehVegano = detalhes?.pratoVegano === true;
 
     return (

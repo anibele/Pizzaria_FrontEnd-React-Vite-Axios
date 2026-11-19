@@ -4,6 +4,7 @@ import { adaptarParaCaixa } from "../services/adapter";
 import { imprimirComanda } from "../services/gerarComanda.ts";
 import { ModalDetalhesPedido } from "../componentes/ModalDetalhesPedido";
 import type { PedidoCaixaDados } from "../interfaces/PedidoDadosCaixa";
+import { dataFinanceira } from '../services/dataFinanceira';
 
 // Lucide Icons
 import { LayoutGrid, Table, Calendar, Search, Loader2, FileDown, Eye} from "lucide-react";
@@ -17,14 +18,8 @@ import "../styles/arquivoCaixa.css";
 
 export default function ArquivoCaixa() {
     // Inicializa a data filtro padrão com o dia de HOJE no formato YYYY-MM-DD
-    const hojeStr = useMemo(() => {
-        const d = new Date();
-        const ano = d.getFullYear();
-        const mes = String(d.getMonth() + 1).padStart(2, '0');
-        const dia = String(d.getDate()).padStart(2, '0');
-        return `${ano}-${mes}-${dia}`;
-    }, []);
-    const [dataFiltro, setDataFiltro] = useState<string>(hojeStr);
+    // Filtro histórico explícito: começa no dia da pizzaria e não muda sozinho à meia-noite.
+    const [dataFiltro, setDataFiltro] = useState<string>(() => dataFinanceira());
     const [visao, setVisao] = useState<"CARDS" | "TABELA">("CARDS");
     const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoCaixaDados | null>(null);
 

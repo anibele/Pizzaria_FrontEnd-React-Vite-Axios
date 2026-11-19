@@ -131,7 +131,7 @@ test('entidades literais, nomes vazios e nomes longos nao sao removidos nem deco
     }
 });
 
-test('valores opcionais e fallbacks existentes do adaptador continuam imprimiveis', () => {
+test('valores opcionais da impressao continuam validos; adaptador recusa DTO sem campos reais', () => {
     for (const pagamento of [null, undefined, '']) {
         const pedido = pedidoBase(); pedido.numeroMesa = null; pedido.formaPagamento = pagamento;
         const { html } = simularImpressao(pedido);
@@ -139,12 +139,7 @@ test('valores opcionais e fallbacks existentes do adaptador continuam imprimivei
         assert.ok(html.includes('<h3>MESA AVULSA</h3>'));
         assert.ok(html.includes(`PAGAMENTO: ${pagamento ?? 'NÃO INFORMADA'}</p>`));
     }
-    const adaptado = adaptarParaCaixa({ id: 15, numeroMesa: 1, dataHora: '2026-11-18T18:30:00', status: 'FINALIZADO', itens: [{}] });
-    const { html } = simularImpressao(adaptado);
-    assert.ok(html.includes('<td class="col-nome">Item sem nome</td>'));
-    assert.ok(html.includes('<td class="col-qtd">0x</td>'));
-    assert.ok(html.includes('<span>R$ 0.00</span>'));
-    assert.ok(html.includes('PAGAMENTO: NÃO INFORMADA'));
+    assert.throws(() => adaptarParaCaixa({ id: 15, numeroMesa: 1, dataHora: '2026-11-18T18:30:00', status: 'FINALIZADO', itens: [{}] }), /incompatíveis/);
 });
 
 test('janela recebe documento completo e script fixo imprime e fecha na ordem existente', () => {

@@ -2,9 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import type { ChartData } from 'chart.js';
 import api from '../services/api';
 import { consultarDashboard } from '../services/consultasOperacionais';
+import { useDataFinanceira } from './useDataFinanceira';
+import { chaveIndicadores } from '../services/dataFinanceira';
 
 export function useDashboardDados() {
-    const consulta = useQuery({ queryKey: ['dashboard-indicadores'],
+    const dia = useDataFinanceira();
+    const consulta = useQuery({ queryKey: chaveIndicadores(dia),
         queryFn: ({ signal }) => consultarDashboard(api, signal), retry: false });
     const dados = consulta.data;
     const chartVendasHora: ChartData<'line'> | null = dados ? {

@@ -9,15 +9,10 @@ import { adaptarParaCaixa } from "../services/adapter";
 import { useNotification } from "../contexts/NotificationContext";
 
 import "../styles/dashboardCaixa.css";
+import { useDataFinanceira } from '../hooks/useDataFinanceira';
 
 export default function DashboardCaixa() {
-        const hojeStr = useMemo(() => {
-        const d = new Date();
-        const ano = d.getFullYear();
-        const mes = String(d.getMonth() + 1).padStart(2, '0');
-        const dia = String(d.getDate()).padStart(2, '0');
-        return `${ano}-${mes}-${dia}`;
-    }, []);
+    const hojeStr = useDataFinanceira();
 
     const { data: pedidosBrutos, isLoading, isError: erroPedidos, refetch: atualizarPedidos } = usePedidosCozinha();
     const { mutate: confirmar, isPending } = usePedidoConfirmarPagamento();

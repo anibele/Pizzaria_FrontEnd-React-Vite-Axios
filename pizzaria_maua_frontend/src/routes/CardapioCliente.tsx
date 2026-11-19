@@ -16,6 +16,10 @@ import ManutencaoMesa from "../pages/ManutencaoMesa";
 import MesaReservada from "../pages/MesaReservada";
 import type { MesaDados } from "../interfaces/MesaDados";
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
+import { CarrinhoDaIdentidade, type ItemCarrinho } from '../services/carrinhoPersistido';
+import { contextoAtualAdicao } from '../services/sessaoAdicao';
+import { controleHttpSessao } from '../services/httpSessao';
+import { adicionarUnidade, motivoNovosItens, motivoSelecao, podeSolicitarPagamento, produtoDisponivel } from '../services/regrasCardapio';
 import { OnboardingProvider } from "../contexts/OnboardingContext";
 import { useOnboarding } from "../hooks/useOnboarding";
 import { WelcomeModal } from "../componentes/onboarding/WelcomeModal";
@@ -27,24 +31,10 @@ import {
 } from "lucide-react";
 import "../styles/cardapio.css";
 
-interface ItemCarrinho {
-    produto: ProdutoDados;
-    quantidade: number;
-}
-
-interface ItemPedidoResponse {
-    id: number;
-    produtoId: number;
-    produtoNome: string;
-    quantidade: number;
-    precoUnitario: number;
-    status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
-}
-
 export default function CardapioCliente() {
-    const { user, loading } = useContext(AuthContext);
+    const { user, loading, versaoSessao } = useContext(AuthContext);
     if (loading || user?.role !== 'MESA' || !Number.isSafeInteger(user.numeroMesa) || user.numeroMesa! <= 0) return <div>Carregando...</div>;
-    return <CardapioAutenticado key={`${user.username}:${user.numeroMesa}`} numeroMesa={user.numeroMesa!} />;
+    return <CardapioAutenticado key={`${versaoSessao}:${user.username}:${user.numeroMesa}`} numeroMesa={user.numeroMesa!} />;
 }
 
 function CardapioAutenticado({ numeroMesa }: { numeroMesa: number }) {
@@ -112,20 +102,23 @@ function CardapioConteudo({
                           }: CardapioConteudoProps) {
     const { status } = useOnboarding();
 
-    const [carrinho, setCarrinho] = useState<ItemCarrinho[]>(() => {
-        try {
-            const carrinhoSalvo = localStorage.getItem(`carrinho_mesa_${numeroMesa}`);
-            return carrinhoSalvo ? JSON.parse(carrinhoSalvo) : [];
-        } catch {
-            return [];
-        }
+    const { user, versaoSessao } = useContext(AuthContext);
+    const [persistencia] = useState(() => {
+        const contexto = contextoAtualAdicao(numeroMesa);
+        return new CarrinhoDaIdentidade({ getItem: chave => localStorage.getItem(chave),
+            setItem: (chave, valor) => localStorage.setItem(chave, valor) }, { username: user!.username, numeroMesa },
+            () => controleHttpSessao.geracao === versaoSessao && contexto !== null
+                && JSON.stringify(contextoAtualAdicao(numeroMesa)) === JSON.stringify(contexto));
     });
+    const recuperado = persistencia.inicial;
+    const [carrinho, setCarrinho] = useState<ItemCarrinho[]>(recuperado.itens);
+    const [erroCarrinho, setErroCarrinho] = useState(recuperado.erro);
 
     const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoDados | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isModalAvisoOpen, setIsModalAvisoOpen] = useState<boolean>(false);
 
-    const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
+    const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos, refetch: atualizarProdutos } = useProdutosAtivos();
     const { data: pedidoAtivo, isLoading: loadingPedido, isError: erroPedido, refetch: refetchPedido } = usePedidoMesaAberto(numeroMesa);
     const abertura = usePedidoCriar(numeroMesa);
     const criando = abertura.processando;
@@ -136,13 +129,26 @@ function CardapioConteudo({
     const envioEmCurso = useRef(false);
     const pagamento = usePedidoFinalizar(numeroMesa);
     const reiniciarPagamento = pagamento.reiniciar;
+    const bloqueioEstado = motivoNovosItens(mesaStatusData, pedidoAtivo);
+    const bloqueioEstoque = carrinho.length && !existePendencia ? motivoSelecao(carrinho, produtos ?? []) : null;
+    const podeAdicionar = (produto: ProdutoDados) => !bloqueioEstado && !existePendencia
+        && produtoDisponivel(produtos?.find(p => p.id === produto.id), (carrinho.find(i => i.produto.id === produto.id)?.quantidade ?? 0) + 1);
 
     useEffect(() => {
-        if (numeroMesa > 0) {
+        if (!erroCarrinho) {
             const carrinhoFiltrado = carrinho.filter(item => item.produto.id !== 9999);
-            localStorage.setItem(`carrinho_mesa_${numeroMesa}`, JSON.stringify(carrinhoFiltrado));
+            const erro = persistencia.salvar(carrinhoFiltrado);
+            // A falha de uma escrita externa deve bloquear novos envios.
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            if (erro) setErroCarrinho(erro);
         }
-    }, [carrinho, numeroMesa]);
+    }, [carrinho, persistencia, erroCarrinho]);
+
+    useEffect(() => {
+        const conferir = () => { const erro = persistencia.conferir(); if (erro) setErroCarrinho(erro); };
+        window.addEventListener('storage', conferir);
+        return () => window.removeEventListener('storage', conferir);
+    }, [persistencia]);
 
     useEffect(() => {
         if (bloqueiaAbertura()) return;
@@ -194,21 +200,13 @@ function CardapioConteudo({
             setIsModalAvisoOpen(false);
             reiniciarPagamento();
             setProdutoSelecionado(null);
-            setCarrinho([]);
         }
     }, [mesaStatusData?.status, clienteIniciouSessao, setClienteIniciouSessao, setIsStandBy, existePendencia, reiniciarPagamento, bloqueiaAbertura]);
 
     const handleAdicionarAoCarrinho = (produto: ProdutoDados) => {
-        if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
-        setCarrinho((carrinhoAtual) => {
-            const itemExistente = carrinhoAtual.find(item => item.produto.id === produto.id);
-            if (itemExistente) {
-                return carrinhoAtual.map(item =>
-                    item.produto.id === produto.id ? { ...item, quantidade: item.quantidade + 1 } : item
-                );
-            }
-            return [...carrinhoAtual, { produto, quantidade: 1 }];
-        });
+        if (erroCarrinho || bloqueioEstado || bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
+        const atual = produtos?.find(p => p.id === produto.id);
+        setCarrinho(carrinhoAtual => adicionarUnidade(carrinhoAtual, atual));
     };
 
     const handleRemoverOuDiminuir = (produtoId: number) => {
@@ -227,34 +225,42 @@ function CardapioConteudo({
         });
     };
 
-    const limparCarrinho = () => setCarrinho([]);
+    const limparCarrinho = () => {
+        const erro = persistencia.salvar([]);
+        if (erro) { setErroCarrinho(erro); return false; }
+        setCarrinho([]);
+        return true;
+    };
 
     const handleEnviarParaCozinha = async () => {
-        if (erroPedido || loadingPedido || bloqueiaAbertura() || envioEmCurso.current || adicao.bloqueada || numeroMesa === 0) return;
+        if (erroCarrinho || erroPedido || loadingPedido || bloqueiaAbertura() || envioEmCurso.current || adicao.bloqueada || numeroMesa === 0) return;
+        // Retry incerto usa exclusivamente a intenção persistida; estoque/status atuais não provam se ela foi aplicada.
+        if (!adicao.pendente && (motivoNovosItens(mesaStatusData, pedidoAtivo) || motivoSelecao(carrinho, produtos ?? []))) return;
         if (!adicao.pendente && carrinho.length === 0) return;
+        const erroPersistencia = persistencia.salvar(carrinho.filter(item => item.produto.id !== 9999));
+        if (erroPersistencia) { setErroCarrinho(erroPersistencia); return; }
         envioEmCurso.current = true;
         try {
             if (adicao.pendente || pedidoAtivo) {
                 const itensPayload = carrinho.map(item => ({ produtoId: item.produto.id!, quantidade: item.quantidade }));
                 // O gestor ignora estes dados em retries e usa exclusivamente o snapshot salvo.
-                await adicao.enviar(adicao.pendente?.pedidoId ?? pedidoAtivo!.id, itensPayload, operacao => {
-                    localStorage.removeItem(`carrinho_mesa_${operacao.contexto.numeroMesa}`);
-                    limparCarrinho();
+                await adicao.enviar(adicao.pendente?.pedidoId ?? pedidoAtivo!.id, itensPayload, () => {
+                    if (!limparCarrinho()) throw new Error('A seleção não pôde ser limpa com segurança.');
                 });
             } else {
                 await abertura.enviar(carrinho.map(item => ({ produtoId: item.produto.id!, quantidade: item.quantidade })), () => {
-                    localStorage.removeItem(`carrinho_mesa_${numeroMesa}`);
-                    limparCarrinho();
+                    if (!limparCarrinho()) throw new Error('A seleção não pôde ser limpa com segurança.');
                 });
             }
         } finally { envioEmCurso.current = false; }
     };
 
-    const itensConsumidos = (pedidoAtivo?.itens as unknown as ItemPedidoResponse[]) || [];
+    const itensConsumidos = pedidoAtivo?.itens ?? [];
     const possuiItensConsumidos = itensConsumidos.length > 0;
     const todosItensProntos = possuiItensConsumidos && itensConsumidos.every(item => item.status === "PRONTO");
 
     const handleSolicitarPagamento = () => {
+        if (!podeSolicitarPagamento(mesaStatusData, pedidoAtivo)) return;
         if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         if (carrinho.length > 0) {
             setIsModalAvisoOpen(true);
@@ -265,8 +271,9 @@ function CardapioConteudo({
     };
 
     const handleDescartarEPagar = () => {
+        if (!podeSolicitarPagamento(mesaStatusData, pedidoAtivo)) return;
         if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
-        limparCarrinho();
+        if (!limparCarrinho()) return;
         setIsModalAvisoOpen(false);
         reiniciarPagamento();
         setIsModalOpen(true);
@@ -283,6 +290,15 @@ function CardapioConteudo({
     };
 
     const produtosCardapio = produtos?.filter(p => p.ativo) || [];
+    if (erroCarrinho) return <div className="error-card" role="alert">
+        <p>{erroCarrinho}</p>
+        <p>Se houver uma operação pendente, solicite atendimento para conferir a comanda.</p>
+        {!existePendencia && <button onClick={() => {
+            const erro = persistencia.iniciarNovo();
+            if (erro) { setErroCarrinho(erro); return; }
+            setCarrinho([]); setErroCarrinho(null);
+        }}>Iniciar nova seleção vazia</button>}
+    </div>;
     if (erroPedido) return <div className="error-card" role="alert">
         <p>Não foi possível consultar a comanda. A ausência de pedido não foi confirmada e a seleção foi preservada.</p>
         <button onClick={() => void refetchPedido()}>Tentar novamente</button>
@@ -339,6 +355,8 @@ function CardapioConteudo({
                         produtos={produtosCardapio}
                         onVerDetalhes={setProdutoSelecionado}
                         onAdicionar={handleAdicionarAoCarrinho}
+                        bloqueado={!!bloqueioEstado || existePendencia || criando || adicionando}
+                        podeAdicionar={podeAdicionar}
                     />
                 </div>
 
@@ -364,7 +382,12 @@ function CardapioConteudo({
                         possuiItensConsumidos={possuiItensConsumidos}
                         todosItensProntos={todosItensProntos}
                         onAbrirPagamento={handleSolicitarPagamento}
+                        motivoBloqueio={bloqueioEstado}
+                        motivoEstoque={bloqueioEstoque || null}
+                        produtosAtuais={produtos}
+                        pagamentoPermitido={podeSolicitarPagamento(mesaStatusData, pedidoAtivo)}
                     />
+                    {(bloqueioEstado || bloqueioEstoque || adicao.mensagem) && <button onClick={() => { void refetchPedido(); void atualizarProdutos(); }}>Atualizar comanda e cardápio</button>}
                 </div>
 
                 <ModalPagamento

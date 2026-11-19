@@ -1,17 +1,8 @@
-export interface ItemPedidoCaixa {
-    id?: number;
-    produtoId: number;
-    produtoNome: string;
-    quantidade: number;
-    precoUnitario: number;
-}
+import type { ItemPedidoDados, PedidoDados } from './PedidoDados';
 
-export interface PedidoCaixaDados {
-    id: number;
-    numeroMesa: number;
-    dataHora: string;
-    status: 'ABERTO' | 'FINALIZADO' | 'AGUARDANDO_PAGAMENTO';
+export type ItemPedidoCaixa = Pick<ItemPedidoDados, 'id' | 'produtoId' | 'produtoNome' | 'quantidade' | 'precoUnitario'>;
+// Modelo de exibição: total calculado dos preços históricos quando o DTO prevê total nulo.
+export interface PedidoCaixaDados extends Omit<PedidoDados, 'itens' | 'faturamento'> {
     itens: ItemPedidoCaixa[];
-    formaPagamento: string | null;
     faturamento: number;
 }
