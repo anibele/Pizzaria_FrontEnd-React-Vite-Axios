@@ -1,4 +1,3 @@
-import {useMemo} from "react";
 import { Link } from "react-router-dom";
 import { LayoutDashboard, Pizza, Armchair, ChefHat, TrendingUp, Wrench, MonitorCog } from "lucide-react";
 // Importações do PrimeReact
@@ -6,17 +5,12 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import PainelAnalitico from "./PainelAnalitico";
 import "../styles/dashboardGerente.css";
 import {useFaturamentoDiario} from "../hooks/useDadosArquivo.ts";
+import { useDataFinanceira } from '../hooks/useDataFinanceira';
 
 export default function DashboardGerente() {
-    const hojeStr = useMemo(() => {
-        const d = new Date();
-        const ano = d.getFullYear();
-        const mes = String(d.getMonth() + 1).padStart(2, '0');
-        const dia = String(d.getDate()).padStart(2, '0');
-        return `${ano}-${mes}-${dia}`;
-    }, []);
+    const hojeStr = useDataFinanceira();
 
-    const { data: faturamentoDia = 0 } = useFaturamentoDiario(hojeStr);
+    const { data: faturamentoDia, isPending, isFetching, isError, isSuccess, refetch } = useFaturamentoDiario(hojeStr);
 
     return (
         <div className="dashboard-container animate-fade-in">
@@ -39,7 +33,10 @@ export default function DashboardGerente() {
                             </div>
                             <div className="metric-info">
                                 <h3>Caixa - Vendas de Hoje</h3>
-                                <p>R$ {faturamentoDia.toFixed(2)}</p>
+                                <p role="status">{isError ? 'Indisponível' : isPending ? 'Carregando...' :
+                                    isSuccess && faturamentoDia !== undefined ? `R$ ${faturamentoDia.toFixed(2)}` : 'Indisponível'}</p>
+                                <button type="button" aria-busy={isFetching} aria-disabled={isFetching}
+                                    onClick={() => { if (!isFetching) void refetch(); }}>Atualizar faturamento</button>
                                 <span className="metric-hint">Acesse o caixa para detalhes</span>
                             </div>
                         </div>
