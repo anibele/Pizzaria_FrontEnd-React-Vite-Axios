@@ -97,9 +97,9 @@ O frontend foi estruturado para ser componentizado, escalável e orientado por c
 - Node.js 18+;
 - npm;
 - backend da pizzaria em execução, disponível em [Backend Pizzaria Mauá](https://github.com/anibele/Pizzaria_BackEnd-SpringBootJPA-).
-- variável de ambiente apontando para o IP do backend.
+- variável de ambiente apontando para a URL da API.
 
-> O frontend utiliza a variável `VITE_BACKEND_IP` em um arquivo .env para montar a URL da API no endereço `http://<IP>:8080`.
+> O frontend utiliza `VITE_API_BASE_URL`. Os valores `VITE_*` são públicos e incorporados ao build; nunca devem conter senhas, JWTs ou outras credenciais.
 
 ---
 
@@ -115,16 +115,16 @@ cd .\pizzaria_maua_frontend
 
 ### 2) Crie o arquivo `.env`
 
-Na raiz de `pizzaria_maua_frontend`, crie um arquivo chamado `.env` com a variável abaixo:
+Na raiz de `pizzaria_maua_frontend`, copie `.env.example` para `.env` e ajuste a URL. Para frontend e backend na mesma máquina:
 
 ```env
-VITE_BACKEND_IP=SEU_IP_DO_BACKEND
+VITE_API_BASE_URL=http://localhost:8080
 ```
 
-Exemplo:
+Para tablets, use um endereço do computador do backend alcançável pela rede local. Exemplo ilustrativo:
 
 ```env
-VITE_BACKEND_IP=192.168.0.10
+VITE_API_BASE_URL=http://192.168.1.100:8080
 ```
 
 ### 3) Instale as dependências
@@ -142,8 +142,36 @@ npm run dev
 O Vite normalmente disponibiliza a aplicação em:
 
 ```text
-http://localhost:5173
+http://localhost:5176
 ```
+
+---
+
+## Transporte e configuração de produção
+
+`VITE_API_BASE_URL` aceita uma URL completa HTTP/HTTPS (inclusive porta e caminho base) ou um caminho iniciado por uma única barra. Barras finais são removidas. Valores vazios, espaços, protocolos diferentes de HTTP(S), credenciais embutidas, query strings, fragmentos e caminhos ambíguos são recusados antes da criação da instância HTTP. A mensagem de erro não reproduz o valor configurado.
+
+O `.env` antigo com apenas `VITE_BACKEND_IP` continua funcionando em `npm run dev`, usando `http://<host>:8080`. Esse fallback só existe quando `VITE_API_BASE_URL` está ausente; um valor explícito inválido não aciona fallback. Reinicie o Vite após mudar o ambiente.
+
+**Migração obrigatória para produção/preview:** configure `VITE_API_BASE_URL` antes de `npm run build` e gere novamente os arquivos. O build não transforma o `.env` existente nem verifica a disponibilidade do servidor. Um build sem a variável explícita recusa iniciar o cliente HTTP no navegador; não usa silenciosamente o IP legado ou localhost. Alterar a variável apenas ao servir arquivos já compilados não altera a URL incorporada.
+
+Com TLS disponibilizado pela infraestrutura, por exemplo:
+
+```env
+VITE_API_BASE_URL=https://api.exemplo.com
+```
+
+O servidor ou proxy precisa oferecer HTTPS com certificado válido para o endereço utilizado. A configuração do React não instala certificados nem habilita TLS no Spring Boot. Uma página HTTPS recusa uma API HTTP, inclusive no desenvolvimento. HTTP explicitamente configurado continua permitido quando a própria página é HTTP, para desenvolvimento ou publicação em rede local controlada; nesse cenário, senhas e JWTs trafegam sem confidencialidade TLS. No tablet, `localhost` identifica o próprio tablet, não o computador do backend. O frontend não substitui o host configurado pelo hostname do navegador.
+
+### Proxy reverso na mesma origem
+
+É possível configurar `VITE_API_BASE_URL=/api` quando um proxy **externo já estiver configurado** para encaminhar esse caminho ao backend. Nenhum proxy de desenvolvimento ou de produção é criado por esta mudança. O proxy deve retirar apenas o prefixo externo, uma vez: `/api/auth/me` → `/auth/me`, `/api/mesas` → `/mesas`. Não acrescente `/api` novamente nos serviços do frontend.
+
+O dashboard já possui o caminho real `/api/dashboard` no backend. Com o prefixo externo `/api`, a URL pública correspondente é `/api/api/dashboard/resumo`, encaminhada para `/api/dashboard/resumo`; esses dois segmentos têm funções diferentes e não devem ser removidos indiscriminadamente. Pode-se escolher outro prefixo externo, como `/backend`, para evitar essa sobreposição. Um caminho relativo herda o protocolo e a origem da página.
+
+### CORS
+
+Se frontend e API tiverem origens diferentes (protocolo, host ou porta), a configuração CORS do backend deve autorizar a origem efetiva do frontend, os métodos utilizados e os cabeçalhos `Authorization`, `Content-Type` e `Idempotency-Key`. O backend consultado utiliza uma lista explícita de origens na configuração de segurança; não se deve presumir que uma nova origem HTTPS já esteja autorizada. A adaptação do servidor deve ser feita separadamente, quando necessária. CORS não criptografa o tráfego e não substitui TLS ou autorização por recurso. O proxy na mesma origem evita a necessidade de CORS entre navegador e API.
 
 ---
 
@@ -186,7 +214,7 @@ Após o login, o usuário é direcionado automaticamente para a área correspond
 
 Este repositório contém as imagens do cardápio e os arquivos de áudio usados na experiência visual e sonora da aplicação.
 
-Se você for configurar o projeto em outro ambiente, verifique também se o backend está exposto na porta correta (`8080`) e se o IP informado em `VITE_BACKEND_IP` está acessível pela máquina onde o frontend será executado.
+Se você for configurar o projeto em outro ambiente, verifique se o endereço completo informado em `VITE_API_BASE_URL` está acessível pelo dispositivo que abre o frontend. Domínios e IPs desta documentação são apenas exemplos; nenhuma implantação pública ou infraestrutura de proxy é presumida.
 
 ---
 
