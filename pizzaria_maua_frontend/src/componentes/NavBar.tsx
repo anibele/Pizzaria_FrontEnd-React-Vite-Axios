@@ -33,13 +33,13 @@ export default function NavBar() {
             style={{
                 position: "relative",
                 width: "100%",
-                overflow: "hidden",
                 boxShadow: "0 6px 20px rgba(0,0,0,0.20)",
                 zIndex: 1000,
                 backgroundColor: "#111"
             }}
         >
             {/* Banner */}
+            <div style={{ position: "relative", overflow: "hidden" }}>
             <img
                 src={bannerImg}
                 alt="Banner Pizzaria Mauá"
@@ -65,6 +65,7 @@ export default function NavBar() {
                 }}
             />
 
+            </div>
             {/* Área do usuário */}
             <div
                 style={{

@@ -44,6 +44,20 @@
        O seu arquivo PedidoMesa é que cuida do visual do card! */
 }
 
+/* 250 (card) + 430 (carrinho) + 32 (gap) + 64 (padding) + 40 (main)
+   + até 16 de scrollbar: abaixo disso as duas áreas não cabem lado a lado. */
+@media (max-width: 832px) {
+    .cardapio-container {
+        flex-direction: column;
+    }
+
+    .coluna-cardapio,
+    .coluna-pedido {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
 /* COORDENAÇÃO DOS CARDS DE PRODUTO */
 .grid-produtos {
     display: grid;
