@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, ShieldCheck, User, Lock, ToggleLeft, ToggleRight } from "lucide-react";
 import { useMesaDadosMutate } from "../hooks/useMesaDadosMutate";
+import { submeterCadastroMesa } from "../services/cadastroMesa";
 
 interface FormularioMesaProps {
     fecharModal: () => void;
@@ -8,7 +9,7 @@ interface FormularioMesaProps {
 }
 
 export function FormularioMesa({ fecharModal, mesasExistentes }: FormularioMesaProps) {
-    const { mutate: cadastrarMesa, isPending } = useMesaDadosMutate();
+    const { mutateAsync: cadastrarMesa, isPending } = useMesaDadosMutate();
 
     // Estados do Formulário
     const [numero, setNumero] = useState<number | "">("");
@@ -17,42 +18,23 @@ export function FormularioMesa({ fecharModal, mesasExistentes }: FormularioMesaP
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [erroValidacao, setErroValidacao] = useState("");
-
-    // Efeito para sugerir login e senha padrão (Ex: mesa11) toda vez que o número mudar
+    const montado = useRef(true);
     useEffect(() => {
-        if (criarUsuario && usarPadrao && numero !== "") {
-            setUsername(`mesa${numero}`);
-            setPassword(`mesa${numero}`);
-        } else if (!usarPadrao && numero !== "" && username === `mesa${numero}`) {
-            // Se desmarcar o padrão, limpa para o usuário digitar do zero
-            setUsername("");
-            setPassword("");
-        }
-    }, [numero, criarUsuario, usarPadrao]);
+        montado.current = true;
+        return () => { montado.current = false; };
+    }, []);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Apenas o username depende do número. A senha é sempre definida pelo gerente.
+    const usernameExibido = usarPadrao && numero !== "" ? `mesa${numero}` : username;
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isPending) return;
         setErroValidacao("");
-
-        if (!numero) return;
-
-        // Validação de mesa duplicada no front-end
-        if (mesasExistentes.includes(Number(numero))) {
-            setErroValidacao(`A Mesa ${numero} já está cadastrada no sistema.`);
-            return;
-        }
-
-        // Monta o payload completo esperado pelo Spring Boot
-        const payload = {
-            numero: Number(numero),
-            criarUsuario,
-            username: criarUsuario ? username : undefined,
-            password: criarUsuario ? password : undefined, // O Spring Security vai aplicar o BCrypt aqui
-        };
-
-        cadastrarMesa(payload, {
-            onSuccess: () => fecharModal(),
-        });
+        const erro = await submeterCadastroMesa({ numero, criarUsuario, usarPadrao, username, password }, mesasExistentes, cadastrarMesa);
+        if (!montado.current) return;
+        if (erro) setErroValidacao(erro);
+        else fecharModal();
     };
 
     return (
@@ -101,7 +83,7 @@ export function FormularioMesa({ fecharModal, mesasExistentes }: FormularioMesaP
                                     checked={usarPadrao}
                                     onChange={(e) => setUsarPadrao(e.target.checked)}
                                 />
-                                <span style={{ fontSize: '0.85rem', color: '#475569' }}>Usar padrão sugerido pelo sistema (Recomendado)</span>
+                                <span style={{ fontSize: '0.85rem', color: '#475569' }}>Usar username padrão (mesa + número)</span>
                             </label>
 
                             <div className="form-linha">
@@ -109,7 +91,7 @@ export function FormularioMesa({ fecharModal, mesasExistentes }: FormularioMesaP
                                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><User size={14} /> Usuário (Username)</span>
                                     <input
                                         type="text"
-                                        value={username}
+                                        value={usernameExibido}
                                         onChange={(e) => setUsername(e.target.value)}
                                         disabled={usarPadrao}
                                         required={criarUsuario}
@@ -120,12 +102,15 @@ export function FormularioMesa({ fecharModal, mesasExistentes }: FormularioMesaP
                                 <label>
                                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Lock size={14} /> Senha (Password)</span>
                                     <input
-                                        type="text" // Texto simples para o gerente ver o que está criando no padrão rápido
+                                        type="password"
+                                        autoComplete="new-password"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        disabled={usarPadrao}
                                         required={criarUsuario}
-                                        style={{ backgroundColor: usarPadrao ? "#e2e8f0" : "#fff" }}
+                                        minLength={12}
+                                        maxLength={72}
+                                        placeholder="Defina uma senha com 12 ou mais caracteres"
+                                        style={{ backgroundColor: "#fff" }}
                                     />
                                 </label>
                             </div>
