@@ -9,7 +9,7 @@ interface BadgeTimerKdsProps {
 
 export default function BadgeTimerKds({ status, minutosRestantes }: BadgeTimerKdsProps) {
     let icon;
-    let texto = "";
+    let texto: string;
     let classeBase = "badge-timer ";
 
     if (status === 'ATRASADO') {
