@@ -19,9 +19,9 @@ export default function DashboardCaixa() {
         return `${ano}-${mes}-${dia}`;
     }, []);
 
-    const { data: pedidosBrutos, isLoading } = usePedidosCozinha();
+    const { data: pedidosBrutos, isLoading, isError: erroPedidos, refetch: atualizarPedidos } = usePedidosCozinha();
     const { mutate: confirmar, isPending } = usePedidoConfirmarPagamento();
-    const { data: faturamentoDia = 0 } = useFaturamentoDiario(hojeStr);
+    const { data: faturamentoDia, isError: erroFaturamento, isLoading: carregandoFaturamento, refetch: atualizarFaturamento } = useFaturamentoDiario(hojeStr);
 
     const { adicionarNotificacao } = useNotification();
     const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoCaixaDados | null>(null);
@@ -35,6 +35,7 @@ export default function DashboardCaixa() {
     }, [pedidosBrutos]);
 
     useEffect(() => {
+        if (erroPedidos) return;
         if (pedidosAtivos.length > 0) {
             pedidosAtivos.forEach(pedidoAtual => {
                 const pedidoAnterior = prevPedidosRef.current.find(p => p.id === pedidoAtual.id);
@@ -47,7 +48,7 @@ export default function DashboardCaixa() {
             });
         }
         prevPedidosRef.current = pedidosAtivos;
-    }, [pedidosAtivos, adicionarNotificacao]);
+    }, [pedidosAtivos, adicionarNotificacao, erroPedidos]);
 
     if (isLoading) {
         return (
@@ -56,6 +57,10 @@ export default function DashboardCaixa() {
             </div>
         );
     }
+    if (erroPedidos) return <div className="empty-state" role="alert">
+        <p>Não foi possível atualizar os pedidos do caixa. A ausência de movimento não foi confirmada.</p>
+        <button onClick={() => void atualizarPedidos()}>Tentar novamente</button>
+    </div>;
 
     const handleConfirmar = (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
@@ -82,7 +87,8 @@ export default function DashboardCaixa() {
                     </div>
                     <div className="faturamento-info">
                         <span className="faturamento-label">Faturamento de Hoje</span>
-                        <span className="faturamento-valor">R$ {faturamentoDia.toFixed(2)}</span>
+                        <span className="faturamento-valor">{erroFaturamento ? 'Indisponível' : carregandoFaturamento ? 'Carregando...' : faturamentoDia !== undefined ? `R$ ${faturamentoDia.toFixed(2)}` : 'Indisponível'}</span>
+                        {erroFaturamento && <button onClick={() => void atualizarFaturamento()}>Atualizar faturamento</button>}
                     </div>
                 </div>
             </div>

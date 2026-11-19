@@ -53,7 +53,7 @@ function CardapioAutenticado({ numeroMesa }: { numeroMesa: number }) {
 
     const { user } = useContext(AuthContext);
 
-    const { data: mesaStatusData } = useMonitorarStatusMesa(numeroMesa > 0 ? numeroMesa : undefined);
+    const { data: mesaStatusData, isError: erroMesa, isLoading: carregandoMesa, refetch: atualizarMesa } = useMonitorarStatusMesa(numeroMesa > 0 ? numeroMesa : undefined);
 
     useEffect(() => {
         if (mesaStatusData?.status === "LIVRE") {
@@ -74,6 +74,12 @@ function CardapioAutenticado({ numeroMesa }: { numeroMesa: number }) {
 
         return mesaStatusData?.status || "OCUPADA";
     };
+
+    if (erroMesa) return <div className="error-card" role="alert">
+        <p>Não foi possível atualizar a situação da mesa. Nenhuma operação será enviada até uma nova consulta.</p>
+        <button onClick={() => void atualizarMesa()}>Tentar novamente</button>
+    </div>;
+    if (carregandoMesa) return <div className="center-message">Carregando mesa...</div>;
 
     return (
         <OnboardingProvider statusMesa={determinarStatusOnboarding()}>
@@ -120,7 +126,7 @@ function CardapioConteudo({
     const [isModalAvisoOpen, setIsModalAvisoOpen] = useState<boolean>(false);
 
     const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
-    const { data: pedidoAtivo, isLoading: loadingPedido, refetch: refetchPedido } = usePedidoMesaAberto(numeroMesa);
+    const { data: pedidoAtivo, isLoading: loadingPedido, isError: erroPedido, refetch: refetchPedido } = usePedidoMesaAberto(numeroMesa);
     const abertura = usePedidoCriar(numeroMesa);
     const criando = abertura.processando;
     const { bloqueiaCarrinho: bloqueiaAbertura, protegida: aberturaProtegida } = abertura;
@@ -224,7 +230,7 @@ function CardapioConteudo({
     const limparCarrinho = () => setCarrinho([]);
 
     const handleEnviarParaCozinha = async () => {
-        if (bloqueiaAbertura() || envioEmCurso.current || adicao.bloqueada || numeroMesa === 0) return;
+        if (erroPedido || loadingPedido || bloqueiaAbertura() || envioEmCurso.current || adicao.bloqueada || numeroMesa === 0) return;
         if (!adicao.pendente && carrinho.length === 0) return;
         envioEmCurso.current = true;
         try {
@@ -277,6 +283,10 @@ function CardapioConteudo({
     };
 
     const produtosCardapio = produtos?.filter(p => p.ativo) || [];
+    if (erroPedido) return <div className="error-card" role="alert">
+        <p>Não foi possível consultar a comanda. A ausência de pedido não foi confirmada e a seleção foi preservada.</p>
+        <button onClick={() => void refetchPedido()}>Tentar novamente</button>
+    </div>;
 
     if (!existePendencia && (mesaStatusData?.status === "MANUTENCAO" || mesaStatusData?.ativo === false)) {
         return <ManutencaoMesa />;

@@ -29,14 +29,14 @@ export default function ArquivoCaixa() {
     const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoCaixaDados | null>(null);
 
     // Requisição reativa usando o Hook
-    const { data: pedidosBrutos, isLoading } = usePedidosPorData(dataFiltro);
+    const { data: pedidosBrutos, isLoading, isError, refetch } = usePedidosPorData(dataFiltro);
 
     // Filtra e adapta somente os finalizados para exibição uniforme
     const pedidosFinalizados = useMemo(() => {
         if (!pedidosBrutos) return [];
         return pedidosBrutos
-            .filter((p: any) => p.status === "FINALIZADO")
-            .map((p: any) => adaptarParaCaixa(p));
+            .filter(p => p.status === "FINALIZADO")
+            .map(p => adaptarParaCaixa(p));
     }, [pedidosBrutos]);
 
     // Calcula o faturamento retroativo total do dia exibido
@@ -104,7 +104,7 @@ export default function ArquivoCaixa() {
 
                 <div className="faturamento-historico-card">
                     <span className="faturamento-label-hist">Total Concluído no Dia</span>
-                    <span className="faturamento-valor-hist">R$ {faturamentoTotalDoDia.toFixed(2)}</span>
+                    <span className="faturamento-valor-hist">{isError ? 'Indisponível' : isLoading ? 'Carregando...' : `R$ ${faturamentoTotalDoDia.toFixed(2)}`}</span>
                 </div>
 
                 <div className="alternador-visao-container">
@@ -130,6 +130,11 @@ export default function ArquivoCaixa() {
                 <div className="loader-arquivo-container">
                     <Loader2 className="animate-spin text-red-600" size={48} />
                     <p>Buscando registros históricos...</p>
+                </div>
+            ) : isError ? (
+                <div className="empty-state" role="alert">
+                    <p>Não foi possível consultar os registros da data selecionada.</p>
+                    <button onClick={() => void refetch()}>Tentar novamente</button>
                 </div>
             ) : pedidosFinalizados.length === 0 ? (
                 <div className="empty-state">

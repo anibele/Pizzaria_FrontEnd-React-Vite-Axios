@@ -8,7 +8,7 @@ import "../styles/painelAnalitico.css";
 
 export default function PainelAnalitico() {
     // Toda a lógica de estado e fetch sumiu daqui de dentro!
-    const { loading, resumo, chartVendasHora, chartPagamentos, rankings } = useDashboardDados();
+    const { loading, erro, atualizar, resumo, chartVendasHora, chartPagamentos, rankings } = useDashboardDados();
 
     const formatarMoeda = (valor: number | undefined) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
@@ -32,6 +32,10 @@ export default function PainelAnalitico() {
             </div>
         );
     }
+    if (erro || !resumo || !rankings) return <div className="status-tela error" role="alert">
+        <p>Não foi possível carregar os indicadores. Os valores não foram confirmados.</p>
+        <button onClick={() => void atualizar()}>Tentar novamente</button>
+    </div>;
 
     return (
         <div className="painel-analitico-container mt-4 animate-fade-in">
