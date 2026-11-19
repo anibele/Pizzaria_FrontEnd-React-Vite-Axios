@@ -30,6 +30,7 @@ interface PedidoMesaProps {
     reenvioPermitido: boolean;
     podeRevisarAdicao: boolean;
     onRevisarAdicao: () => void;
+    onVerificarAbertura?: () => void;
     pedidoAtivo: PedidoDados | null | undefined;
     itensConsumidos: ItemPedidoResponse[];
     possuiItensConsumidos: boolean;
@@ -49,6 +50,7 @@ export default function PedidoMesa({
                                        reenvioPermitido,
                                        podeRevisarAdicao,
                                        onRevisarAdicao,
+                                       onVerificarAbertura,
                                        pedidoAtivo,
                                        itensConsumidos,
                                        possuiItensConsumidos,
@@ -74,7 +76,9 @@ export default function PedidoMesa({
             <h3 className="pedido-titulo">
                 <ClipboardList size={20} color="#e53935" /> Comanda atual
             </h3>
-            <p className="pedido-subtitulo">Estes itens ainda não foram para a cozinha.</p>
+            <p className="pedido-subtitulo">{onVerificarAbertura
+                ? "Seleção protegida enquanto conferimos a abertura."
+                : "Estes itens ainda não foram para a cozinha."}</p>
 
             {(adicaoPendente || mensagemAdicao) && (
                 <div className="carrinho-conteudo" aria-live="polite" role="status">
@@ -83,6 +87,9 @@ export default function PedidoMesa({
                         {adicionando ? "Enviando..." : "Tentar novamente"}
                     </button>}
                     {podeRevisarAdicao && <button className="btn btn-primary" onClick={onRevisarAdicao}>Revisar seleção</button>}
+                    {onVerificarAbertura && <button className="btn btn-primary" disabled={criando} onClick={onVerificarAbertura}>
+                        {criando ? "Aguarde..." : "Verificar pedido"}
+                    </button>}
                 </div>
             )}
 

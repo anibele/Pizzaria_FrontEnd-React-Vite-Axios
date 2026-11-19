@@ -119,10 +119,12 @@ function CardapioConteudo({
 
     const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos } = useProdutosAtivos();
     const { data: pedidoAtivo, isLoading: loadingPedido, refetch: refetchPedido } = usePedidoMesaAberto(numeroMesa);
-    const { mutate: criarNovoPedido, isPending: criando } = usePedidoCriar();
+    const abertura = usePedidoCriar(numeroMesa);
+    const criando = abertura.processando;
+    const { bloqueiaCarrinho: bloqueiaAbertura, protegida: aberturaProtegida } = abertura;
     const adicao = usePedidoAdicionarItens(numeroMesa);
     const adicionando = adicao.enviando;
-    const existePendencia = !!adicao.pendente || adicao.bloqueada;
+    const existePendencia = !!adicao.pendente || adicao.bloqueada || abertura.protegida;
     const envioEmCurso = useRef(false);
     const pagamento = usePedidoFinalizar(numeroMesa);
     const reiniciarPagamento = pagamento.reiniciar;
@@ -135,6 +137,7 @@ function CardapioConteudo({
     }, [carrinho, numeroMesa]);
 
     useEffect(() => {
+        if (bloqueiaAbertura()) return;
         if (status === "TUTORIAL" && produtos && produtos.length > 0) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setCarrinho(carrinhoAtual => {
@@ -151,7 +154,7 @@ function CardapioConteudo({
                 return carrinhoAtual;
             });
         }
-    }, [status, produtos]);
+    }, [status, produtos, aberturaProtegida, bloqueiaAbertura]);
 
     useEffect(() => {
         if (isStandBy || (mesaStatusData?.status === "LIVRE" && !clienteIniciouSessao)) return;
@@ -175,7 +178,7 @@ function CardapioConteudo({
     }, [isStandBy, setIsStandBy, mesaStatusData?.status, clienteIniciouSessao]);
 
     useEffect(() => {
-        if (mesaStatusData?.status === "LIVRE" && !existePendencia) {
+        if (mesaStatusData?.status === "LIVRE" && !clienteIniciouSessao && !existePendencia && !bloqueiaAbertura()) {
             setClienteIniciouSessao(false);
             setIsStandBy(false);
             // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -185,10 +188,10 @@ function CardapioConteudo({
             setProdutoSelecionado(null);
             setCarrinho([]);
         }
-    }, [mesaStatusData?.status, setClienteIniciouSessao, setIsStandBy, existePendencia, reiniciarPagamento]);
+    }, [mesaStatusData?.status, clienteIniciouSessao, setClienteIniciouSessao, setIsStandBy, existePendencia, reiniciarPagamento, bloqueiaAbertura]);
 
     const handleAdicionarAoCarrinho = (produto: ProdutoDados) => {
-        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
+        if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         setCarrinho((carrinhoAtual) => {
             const itemExistente = carrinhoAtual.find(item => item.produto.id === produto.id);
             if (itemExistente) {
@@ -201,7 +204,7 @@ function CardapioConteudo({
     };
 
     const handleRemoverOuDiminuir = (produtoId: number) => {
-        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
+        if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         setCarrinho((carrinhoAtual) => {
             const item = carrinhoAtual.find(i => i.produto.id === produtoId);
             if (!item) return carrinhoAtual;
@@ -219,7 +222,7 @@ function CardapioConteudo({
     const limparCarrinho = () => setCarrinho([]);
 
     const handleEnviarParaCozinha = async () => {
-        if (envioEmCurso.current || adicao.bloqueada || numeroMesa === 0) return;
+        if (bloqueiaAbertura() || envioEmCurso.current || adicao.bloqueada || numeroMesa === 0) return;
         if (!adicao.pendente && carrinho.length === 0) return;
         envioEmCurso.current = true;
         try {
@@ -231,11 +234,9 @@ function CardapioConteudo({
                     limparCarrinho();
                 });
             } else {
-                // Abertura continua no endpoint existente, sem Idempotency-Key.
-                await new Promise<void>((resolve) => {
-                    criarNovoPedido({ numeroMesa, formaPagamento: "PENDENTE",
-                        itens: carrinho.map(item => ({ produtoId: item.produto.id!, quantidade: item.quantidade }))
-                    }, { onSuccess: () => { limparCarrinho(); }, onSettled: () => resolve() });
+                await abertura.enviar(carrinho.map(item => ({ produtoId: item.produto.id!, quantidade: item.quantidade })), () => {
+                    localStorage.removeItem(`carrinho_mesa_${numeroMesa}`);
+                    limparCarrinho();
                 });
             }
         } finally { envioEmCurso.current = false; }
@@ -246,7 +247,7 @@ function CardapioConteudo({
     const todosItensProntos = possuiItensConsumidos && itensConsumidos.every(item => item.status === "PRONTO");
 
     const handleSolicitarPagamento = () => {
-        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
+        if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         if (carrinho.length > 0) {
             setIsModalAvisoOpen(true);
         } else {
@@ -256,7 +257,7 @@ function CardapioConteudo({
     };
 
     const handleDescartarEPagar = () => {
-        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
+        if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         limparCarrinho();
         setIsModalAvisoOpen(false);
         reiniciarPagamento();
@@ -264,7 +265,7 @@ function CardapioConteudo({
     };
 
     const handleEnviarSolicitacaoPagamento = async (formaPagamentoSelecionada: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
-        if (adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
+        if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         await pagamento.solicitar(pedidoAtivo?.id, formaPagamentoSelecionada);
     };
 
@@ -338,10 +339,14 @@ function CardapioConteudo({
                         criando={criando}
                         adicionando={adicionando}
                         adicaoPendente={existePendencia}
-                        mensagemAdicao={adicao.mensagem}
-                        reenvioPermitido={!!adicao.pendente && !adicao.bloqueada}
-                        podeRevisarAdicao={adicao.podeRevisar}
-                        onRevisarAdicao={adicao.revisarRejeitada}
+                        mensagemAdicao={abertura.protegida ? abertura.mensagem : adicao.mensagem}
+                        reenvioPermitido={!abertura.protegida && !!adicao.pendente && !adicao.bloqueada}
+                        podeRevisarAdicao={abertura.protegida ? abertura.podeRevisar : adicao.podeRevisar}
+                        onRevisarAdicao={abertura.protegida ? () => {
+                            setClienteIniciouSessao(true);
+                            abertura.revisarRejeitada();
+                        } : adicao.revisarRejeitada}
+                        onVerificarAbertura={abertura.protegida && abertura.pendente ? abertura.verificar : undefined}
                         pedidoAtivo={pedidoAtivo}
                         itensConsumidos={itensConsumidos}
                         possuiItensConsumidos={possuiItensConsumidos}
