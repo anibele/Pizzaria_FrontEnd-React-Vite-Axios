@@ -9,7 +9,7 @@ export default function Login() {
     const [erro, setErro] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
-    const { login } = useContext(AuthContext);
+    const { login, loading: recuperando, erroSessao, podeRecuperarSessao, revalidarSessao } = useContext(AuthContext);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,9 +24,9 @@ export default function Login() {
             setLoading(true);
             // Executa a função de login da sua Context API
             await login(username, senha);
-        } catch (err: any) {
+        } catch (err: unknown) {
             // Captura o erro do backend se houver rejeição de Promise
-            setErro("Usuário ou senha incorretos. Verifique os dados do tablet.");
+            setErro(err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.');
         } finally {
             setLoading(false);
         }
@@ -49,12 +49,14 @@ export default function Login() {
                 <form onSubmit={handleSubmit} className="login-form">
 
                     {/* Feedback de Erro */}
-                    {erro && (
+                    {(erro || erroSessao) && (
                         <div className="error-banner">
                             <AlertCircle size={18} style={{ flexShrink: 0 }} />
-                            <span>{erro}</span>
+                            <span>{erroSessao || erro}</span>
                         </div>
                     )}
+                    {podeRecuperarSessao && <button type="button" className="btn-login-submit" disabled={recuperando}
+                        onClick={() => { setErro(null); void revalidarSessao(); }}>Recuperar sessão</button>}
 
                     {/* Campo de Usuário */}
                     <div className="input-group">
@@ -92,7 +94,7 @@ export default function Login() {
                     </div>
 
                     {/* Botão de Enviar */}
-                    <button type="submit" className="btn-login-submit" disabled={loading}>
+                    <button type="submit" className="btn-login-submit" disabled={loading || recuperando}>
                         {loading ? (
                             <>
                                 <Loader2 className="animate-spin" size={18} />

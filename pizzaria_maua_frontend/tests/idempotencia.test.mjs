@@ -5,7 +5,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import PedidoMesa from '../src/componentes/PedidoMesa.tsx';
 import { GestorAdicao, enviarAdicao, MENSAGEM_INCERTA } from '../src/services/adicaoPendente.ts';
-import { novoUUID, CHAVE_ADICAO_PENDENTE, CHAVE_SESSAO_ADICAO, garantirSessaoAdicao, contextoAtualAdicao, encerrarSessaoAdicao } from '../src/services/sessaoAdicao.ts';
+import { novoUUID, CHAVE_ADICAO_PENDENTE, CHAVE_SESSAO_ADICAO, garantirSessaoAdicao, contextoAtualAdicao, encerrarSessaoAdicao, definirVinculoAutenticado } from '../src/services/sessaoAdicao.ts';
 class Memory {
     values = new Map();
     getItem(k) { return this.values.get(k) ?? null; }
@@ -398,12 +398,13 @@ test('registro corrompido bloqueia novos envios', async () => {
 test('fallback UUID usa getRandomValues com versao/variante corretas', () => {
     const k = novoUUID({ getRandomValues: v => crypto.getRandomValues(v) }); assert.match(k, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 });
-test('sessao sobrevive ao reload, nova autenticacao muda nonce e logout limpa pendencia', async () => {
+test('sessao sobrevive ao reload, nova autenticacao muda nonce e logout preserva pendencia', async () => {
     const oldLocal = Object.getOwnPropertyDescriptor(globalThis, 'localStorage'), oldSession = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
     const local = new Memory(), session = new Memory();
     Object.defineProperty(globalThis, 'localStorage', { value: local, configurable: true }); Object.defineProperty(globalThis, 'sessionStorage', { value: session, configurable: true });
     try {
         local.setItem('token', 'credencial-apenas-no-storage-ja-existente'); local.setItem('user', JSON.stringify({ username: 'mesa01', role: 'MESA' }));
+        definirVinculoAutenticado({ username: 'mesa01', role: 'MESA', numeroMesa: 1, token: local.getItem('token') });
         garantirSessaoAdicao({ username: 'mesa01', role: 'MESA' }); const first = contextoAtualAdicao(1);
         garantirSessaoAdicao({ username: 'mesa01', role: 'MESA' }); assert.deepEqual(contextoAtualAdicao(1), first);
         garantirSessaoAdicao({ username: 'mesa01', role: 'MESA' }, true); assert.notEqual(contextoAtualAdicao(1).sessao, first.sessao);
@@ -416,8 +417,9 @@ test('sessao sobrevive ao reload, nova autenticacao muda nonce e logout limpa pe
         await pendente.enviar(15, itens(), () => assert.fail(), () => assert.fail());
         assert.equal(pendente.obterEstado().bloqueada, true);
         session.setItem(CHAVE_ADICAO_PENDENTE, '{}'); encerrarSessaoAdicao(); assert.equal(contextoAtualAdicao(1), null);
-        assert.equal(local.getItem(CHAVE_SESSAO_ADICAO), null); assert.equal(session.getItem(CHAVE_ADICAO_PENDENTE), null);
+        assert.equal(local.getItem(CHAVE_SESSAO_ADICAO), null); assert.equal(session.getItem(CHAVE_ADICAO_PENDENTE), '{}');
     } finally {
+        definirVinculoAutenticado(null);
         if (oldLocal) Object.defineProperty(globalThis, 'localStorage', oldLocal); else delete globalThis.localStorage;
         if (oldSession) Object.defineProperty(globalThis, 'sessionStorage', oldSession); else delete globalThis.sessionStorage;
     }
@@ -444,8 +446,9 @@ test('falha ao criar novo marcador de login nao conserva sessao anterior', () =>
     Object.defineProperty(globalThis, 'localStorage', { value: local, configurable: true });
     try {
         local.setItem('token', 'token-sintetico'); local.setItem('user', JSON.stringify({ username: 'mesa01', role: 'MESA' }));
+        definirVinculoAutenticado({ username: 'mesa01', role: 'MESA', numeroMesa: 1, token: local.getItem('token') });
         garantirSessaoAdicao({ username: 'mesa01', role: 'MESA' }); assert.ok(contextoAtualAdicao(1));
         local.setItem = () => { throw new Error('quota'); }; garantirSessaoAdicao({ username: 'mesa01', role: 'MESA' }, true);
         assert.equal(contextoAtualAdicao(1), null);
-    } finally { if (old) Object.defineProperty(globalThis, 'localStorage', old); else delete globalThis.localStorage; }
+    } finally { definirVinculoAutenticado(null); if (old) Object.defineProperty(globalThis, 'localStorage', old); else delete globalThis.localStorage; }
 });

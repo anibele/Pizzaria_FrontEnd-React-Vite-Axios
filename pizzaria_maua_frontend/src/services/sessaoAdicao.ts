@@ -1,6 +1,10 @@
 export const CHAVE_SESSAO_ADICAO = "pizzaria-adicao-sessao";
 export const CHAVE_ADICAO_PENDENTE = "pizzaria-adicao-pendente";
 
+interface VinculoAutenticado { username: string; role: string; numeroMesa: number | null; token: string }
+let vinculo: VinculoAutenticado | null = null;
+export function definirVinculoAutenticado(atual: VinculoAutenticado | null): void { vinculo = atual; }
+
 export interface ContextoAdicao {
     sessao: string;
     username: string;
@@ -32,15 +36,18 @@ export function contextoAtualAdicao(numeroMesa: number): ContextoAdicao | null {
     try {
         const user = JSON.parse(localStorage.getItem("user") || "null");
         const sessao = JSON.parse(localStorage.getItem(CHAVE_SESSAO_ADICAO) || "null");
-        if (!localStorage.getItem("token") || !user || !sessao || !Number.isSafeInteger(numeroMesa) || numeroMesa <= 0
+        if (!vinculo || vinculo.role !== 'MESA' || vinculo.numeroMesa !== numeroMesa
+            || vinculo.token !== localStorage.getItem('token') || user?.username !== vinculo.username || user?.role !== vinculo.role
+            || !localStorage.getItem("token") || !user || !sessao || !Number.isSafeInteger(numeroMesa) || numeroMesa <= 0
             || user.username !== sessao.username || user.role !== sessao.role || typeof sessao.sessao !== "string") return null;
         return { sessao: sessao.sessao, username: user.username, role: user.role, numeroMesa };
     } catch { return null; }
 }
 
 export function encerrarSessaoAdicao(): void {
+    definirVinculoAutenticado(null);
     try {
         localStorage.removeItem(CHAVE_SESSAO_ADICAO);
-        sessionStorage.removeItem(CHAVE_ADICAO_PENDENTE);
+        // A pendência incerta permanece preservada; outra sessão não pode reenviá-la.
     } catch { /* Sem sessao valida, nenhuma pendencia pode ser reenviada. */ }
 }

@@ -42,14 +42,16 @@ interface ItemPedidoResponse {
 }
 
 export default function CardapioCliente() {
+    const { user, loading } = useContext(AuthContext);
+    if (loading || user?.role !== 'MESA' || !Number.isSafeInteger(user.numeroMesa) || user.numeroMesa! <= 0) return <div>Carregando...</div>;
+    return <CardapioAutenticado key={`${user.username}:${user.numeroMesa}`} numeroMesa={user.numeroMesa!} />;
+}
+
+function CardapioAutenticado({ numeroMesa }: { numeroMesa: number }) {
     const [isStandBy, setIsStandBy] = useState<boolean>(false);
     const [clienteIniciouSessao, setClienteIniciouSessao] = useState<boolean>(false);
 
     const { user } = useContext(AuthContext);
-
-    const numeroMesa = user && user.username
-        ? Number(user.username.replace(/\D/g, ""))
-        : 0;
 
     const { data: mesaStatusData } = useMonitorarStatusMesa(numeroMesa > 0 ? numeroMesa : undefined);
 

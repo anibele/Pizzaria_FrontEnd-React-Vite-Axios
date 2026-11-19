@@ -21,7 +21,12 @@ export function usePedidoAdicionarItens(numeroMesa: number) {
         }, contexto, () => contextoAtualAdicao(numeroMesa));
     }, [numeroMesa, username, role]);
     const estado = useSyncExternalStore(gestor.assinar, gestor.obterEstado);
-    const mutation = useMutation({ mutationFn: (op: AdicaoPendente) => enviarAdicao(api, op), retry: false });
+    const mutation = useMutation({ mutationFn: (op: AdicaoPendente) => {
+        if (JSON.stringify(contextoAtualAdicao(op.contexto.numeroMesa)) !== JSON.stringify(op.contexto)) {
+            throw new Error('A sessão mudou. A adição original permanece protegida.');
+        }
+        return enviarAdicao(api, op);
+    }, retry: false, networkMode: 'always' });
 
     const enviar = async (pedidoId: number, itens: AdicionarItensInput[], confirmar: (op: AdicaoPendente) => void) => {
         await gestor.enviar(pedidoId, itens, op => mutation.mutateAsync(op), op => {
