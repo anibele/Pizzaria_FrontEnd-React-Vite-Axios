@@ -1,37 +1,30 @@
-import type { ProdutoDados } from "./ProdutoDados";
-import type { MesaDados } from "./MesaDados";
+export type StatusPedido = 'ABERTO' | 'AGUARDANDO_PAGAMENTO' | 'FINALIZADO';
+export type StatusItemPedido = 'PENDENTE' | 'EM_PREPARO' | 'PRONTO';
 
+// PedidoResponseDTO e ItemPedidoResponseDTO: números JSON e LocalDateTime sem offset.
 export interface ItemPedidoDados {
-    id?: number;
-    produto: ProdutoDados;
+    id: number;
+    produtoId: number;
+    produtoNome: string;
     quantidade: number;
-
-    // NOVOS CAMPOS ADICIONADOS PARA A FILA INTELIGENTE DA COZINHA:
-    status: 'PENDENTE' | 'EM_PREPARO' | 'PRONTO';
-    dataHoraInclusao: string;     // O LocalDateTime do Java chega aqui como String ISO
-    tempoPreparoMinutos: number;  // Inteiro pronto para fazermos as contas de peso e prioridade
+    precoUnitario: number;
+    status: StatusItemPedido;
+    dataHoraInclusao: string;
+    tempoPreparoMinutos: number;
+    dataHoraConclusao: string | null;
 }
-
 export interface PedidoDados {
     id: number;
-    mesa: MesaDados;
+    numeroMesa: number;
     dataHora: string;
-    status: 'ABERTO' | 'FINALIZADO' | 'AGUARDANDO_PAGAMENTO';
+    status: StatusPedido;
     itens: ItemPedidoDados[];
-    formaPagamento: string;
-    faturamento?: number;
+    formaPagamento: string | null;
+    faturamento: number | null;
 }
-
 export interface CriarPedidoInput {
     numeroMesa: number;
-    itens: {
-        produtoId: number;
-        quantidade: number;
-    }[];
+    itens: AdicionarItensInput[];
     formaPagamento: string;
 }
-
-export interface AdicionarItensInput {
-    produtoId: number;
-    quantidade: number;
-}
+export interface AdicionarItensInput { produtoId: number; quantidade: number }

@@ -16,9 +16,11 @@ interface ListaCardapioProps {
     produtos: ProdutoDados[];
     onVerDetalhes: (produto: ProdutoDados) => void;
     onAdicionar: (produto: ProdutoDados) => void;
+    bloqueado?: boolean;
+    podeAdicionar?: (produto: ProdutoDados) => boolean;
 }
 
-export default function ListaCardapio({ produtos, onVerDetalhes, onAdicionar }: ListaCardapioProps) {
+export default function ListaCardapio({ produtos, onVerDetalhes, onAdicionar, bloqueado = false, podeAdicionar }: ListaCardapioProps) {
 
     // 1. SEPARAÇÃO DAS PIZZAS (Banco retorna "PIZZAS")
     const todasPizzas = produtos.filter(p => p.categoria?.toUpperCase() === "PIZZAS");
@@ -106,6 +108,7 @@ export default function ListaCardapio({ produtos, onVerDetalhes, onAdicionar }: 
                                     produto={produto}
                                     onVerDetalhes={onVerDetalhes}
                                     onAdicionar={onAdicionar}
+                                    bloqueado={bloqueado || (podeAdicionar !== undefined && !podeAdicionar(produto))}
                                 />
                             ))}
                         </div>

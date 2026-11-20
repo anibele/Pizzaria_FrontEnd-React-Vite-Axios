@@ -59,12 +59,23 @@
     flex-direction: column;
     gap: 2px;
     flex: 1; /* Faz o texto ocupar todo o espaço disponível antes dos botões */
+    min-width: 0;
 }
 
 .item-carrinho-nome {
     font-size: 0.95rem;
     color: #333;
     line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 832px) {
+    .cardapio-container .sticky-pedido-wrapper {
+        position: static;
+        min-width: 0;
+        max-height: none;
+        overflow-y: visible;
+    }
 }
 
 .item-carrinho-preco {

@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Armchair, Plus, Trash2, CheckCircle, XCircle, Wrench, RefreshCw, Clock } from "lucide-react";
 import { useMesaDados } from "../hooks/useMesaDados";
 import { useMesaMutateStatus } from "../hooks/useMesaMutateStatus";
 import { useMesaDeletar } from "../hooks/useMesaDelete";
-import { useMesaAlterarAtivacao } from "../hooks/useMesaAlterarAtivacao"; // 🌟 Importando o hook de ativação real
+import { useMesaAlterarAtivacao } from "../hooks/useMesaAlterarAtivacao";
+import { AcoesMesa, consultarMesa } from "../services/acoesMesa";
+import api from "../services/api";
+import type { MesaDados } from "../interfaces/MesaDados";
 import { FormularioMesa } from "../componentes/FormularioMesa";
 import { ModalAcoesMesa } from "../componentes/ModalAcoesMesa";
 import "../styles/mesasGerente.css";
@@ -11,14 +15,32 @@ import "../styles/mesasGerente.css";
 export default function MesasGerente() {
     const { data: mesas, isLoading, isError } = useMesaDados();
     const { mutate: atualizarStatus } = useMesaMutateStatus();
-    const { mutate: deletarMesa } = useMesaDeletar();
-    const { mutate: alterarAtivacao } = useMesaAlterarAtivacao(); // 🌟 Instanciando a mutação
+    const { mutateAsync: deletarMesa } = useMesaDeletar();
+    const { mutateAsync: alterarAtivacao } = useMesaAlterarAtivacao();
+    const queryClient = useQueryClient();
+    const gestor = useMemo(() => new AcoesMesa(queryClient, {
+        excluir: deletarMesa,
+        ativacao: alterarAtivacao,
+        consultar: (numero, signal) => consultarMesa(api, numero, signal),
+    }), [queryClient, deletarMesa, alterarAtivacao]);
+    const estado = useSyncExternalStore(gestor.assinar, gestor.obterEstado);
+    useEffect(() => () => gestor.limpar(), [gestor]);
 
     const [modalMesaAberto, setModalMesaAberto] = useState(false);
-    const [mesaSelecionadaAcoes, setMesaSelecionadaAcoes] = useState<number | null>(null);
+    const [mesaSelecionadaAcoes, setMesaSelecionadaAcoes] = useState<MesaDados | null>(null);
+
+    const abrirAcoes = (mesa: MesaDados) => {
+        if (gestor.obterEstado().processando) return;
+        gestor.limpar();
+        setMesaSelecionadaAcoes(mesa);
+    };
+    const fecharAcoes = () => {
+        if (!gestor.obterEstado().processando) setMesaSelecionadaAcoes(null);
+    };
 
     // Ciclo inteligente de alteração manual de status (apenas para mesas ativas)
     const handleAlternarStatus = (numero: number, statusAtual: 'LIVRE' | 'OCUPADA' | 'MANUTENCAO' | 'RESERVADA') => {
+        if (gestor.obterEstado().processando) return;
         let novoStatus: 'LIVRE' | 'OCUPADA' | 'MANUTENCAO' | 'RESERVADA';
 
         if (statusAtual === 'LIVRE') novoStatus = 'RESERVADA';
@@ -29,42 +51,30 @@ export default function MesasGerente() {
         atualizarStatus({ numero, status: novoStatus });
     };
 
-    // OPÇÃO 1 DO MODAL: Desativação Lógica Real (chama o endpoint PATCH /ativacao)
-    const handleDesativarMesa = (numero: number) => {
-        alterarAtivacao({ numero, ativo: false });
-        setMesaSelecionadaAcoes(null);
+    const handleDesativarMesa = () => {
+        if (mesaSelecionadaAcoes) void gestor.executar(mesaSelecionadaAcoes, 'desativar');
     };
 
     // Reativação rápida pelo card cinza
-    const handleAtivarMesa = (numero: number) => {
-        alterarAtivacao({ numero, ativo: true });
+    const handleAtivarMesa = (mesa: MesaDados) => {
+        void gestor.executar(mesa, 'ativar');
     };
 
-    // OPÇÃO 2 DO MODAL: Tenta deletar fisicamente. Se houver FK, o catch faz o fallback automático
-    const handleExcluirDefinitivo = (numero: number) => {
-        setMesaSelecionadaAcoes(null);
-
-        deletarMesa(numero, {
-            onError: (error: any) => {
-                const mensagemErro = error.response?.data?.message || "";
-
-                if (mensagemErro.includes("históricos de pedidos") || error.response?.status === 409 || error.response?.status === 500) {
-                    alert(`⚠️ A Mesa ${numero} possui históricos de pedidos vinculados.\n\nPor segurança, o sistema converteu a ação e a mesa foi apenas DESATIVADA temporariamente.`);
-                    alterarAtivacao({ numero, ativo: false }); // Fallback seguro
-                } else {
-                    alert("❌ Erro inesperado ao tentar excluir a mesa.");
-                }
-            }
-        });
+    const handleExcluirDefinitivo = () => {
+        if (mesaSelecionadaAcoes) void gestor.executar(mesaSelecionadaAcoes, 'excluir');
     };
 
     if (isLoading) return <div className="status-tela"><p>⏳ Carregando mapa de mesas...</p></div>;
-    if (isError) return <div className="status-tela error"><p>❌ Erro ao conectar com o servidor de mesas.</p></div>;
+    if (isError && !mesas) return <div className="status-tela error"><p>❌ Erro ao conectar com o servidor de mesas.</p></div>;
 
     const mapeamentoNumeros = mesas ? mesas.map(m => m.numero) : [];
+    const mesaParaVerificar = mesas?.find(m => m.numero === estado.numero);
 
     return (
         <div className="gerente-mesas-container animate-fade-in">
+            {mesaSelecionadaAcoes === null && estado.mensagem && <p role={estado.processando || estado.sucesso ? 'status' : 'alert'}>{estado.mensagem}</p>}
+            {mesaSelecionadaAcoes === null && estado.verificar && mesaParaVerificar && <button className="btn-alternar-status" onClick={() => { void gestor.verificar(mesaParaVerificar); }}>Verificar mesa</button>}
+            {isError && !estado.mensagem && <p role="alert">Não foi possível atualizar as mesas. Exibindo os últimos dados confirmados.</p>}
             <div className="topo-painel">
                 <div>
                     <h2>
@@ -107,7 +117,7 @@ export default function MesasGerente() {
                             <div key={mesa.numero} className={`card-mesa ${classeCard}`}>
                                 <div className="card-mesa-header">
                                     <h3>Mesa {mesa.numero}</h3>
-                                    <button onClick={() => setMesaSelecionadaAcoes(mesa.numero)} className="btn-deletar-mesa" title="Remover ou Desativar">
+                                    <button onClick={() => abrirAcoes(mesa)} disabled={estado.processando} className="btn-deletar-mesa" title="Remover ou Desativar">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -119,11 +129,11 @@ export default function MesasGerente() {
                                 <div className="card-mesa-acoes">
                                     {/* 🔄 Se a mesa não estiver ativa, exibe o botão de ativação rápida */}
                                     {!mesa.ativo ? (
-                                        <button onClick={() => handleAtivarMesa(mesa.numero)} className="btn-ativar-mesa">
+                                        <button onClick={() => handleAtivarMesa(mesa)} disabled={estado.processando} className="btn-ativar-mesa">
                                             <CheckCircle size={14} /> Ativar Mesa
                                         </button>
                                     ) : (
-                                        <button onClick={() => handleAlternarStatus(mesa.numero, mesa.status)} className="btn-alternar-status">
+                                        <button onClick={() => handleAlternarStatus(mesa.numero, mesa.status)} disabled={estado.processando} className="btn-alternar-status">
                                             <RefreshCw size={14} /> Mudar Status
                                         </button>
                                     )}
@@ -151,10 +161,12 @@ export default function MesasGerente() {
             {/* Modal de Ações Inteligentes */}
             <ModalAcoesMesa
                 isOpen={mesaSelecionadaAcoes !== null}
-                onClose={() => setMesaSelecionadaAcoes(null)}
-                numeroMesa={mesaSelecionadaAcoes || 0}
-                onDesativar={() => handleDesativarMesa(mesaSelecionadaAcoes!)}
-                onExcluir={() => handleExcluirDefinitivo(mesaSelecionadaAcoes!)}
+                onClose={fecharAcoes}
+                numeroMesa={mesaSelecionadaAcoes?.numero || 0}
+                estado={estado}
+                onDesativar={handleDesativarMesa}
+                onExcluir={handleExcluirDefinitivo}
+                onVerificar={() => { if (mesaSelecionadaAcoes) void gestor.verificar(mesaSelecionadaAcoes); }}
             />
         </div>
     );

@@ -105,6 +105,11 @@
 }
 
 .btn-deletar-mesa {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: #94a3b8;

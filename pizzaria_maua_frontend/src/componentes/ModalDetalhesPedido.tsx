@@ -1,7 +1,8 @@
 import { X, Printer } from "lucide-react";
 import type { PedidoCaixaDados } from "../interfaces/PedidoDadosCaixa"; // Novo import
-import { baixarComandaTxt } from "../services/gerarComandaTxt";
+import { imprimirComanda } from "../services/gerarComanda.ts";
 import "../styles/modaldetalhespedido.css";
+import { useDialogo } from '../hooks/useDialogo';
 
 interface ModalDetalhesPedidoProps {
     isOpen: boolean;
@@ -10,15 +11,16 @@ interface ModalDetalhesPedidoProps {
 }
 
 export function ModalDetalhesPedido({ isOpen, onClose, pedido }: ModalDetalhesPedidoProps) {
+    const [dialogoRef, tituloId] = useDialogo(isOpen && !!pedido, onClose);
     if (!isOpen || !pedido) return null;
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <div ref={dialogoRef} className="modal-container dialogo-acessivel" role="dialog" aria-modal="true" aria-labelledby={tituloId} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
 
                 <div className="modal-header">
-                    <h2>Mesa {pedido.numeroMesa ?? "Avulsa"}</h2>
-                    <button onClick={onClose} className="btn-fechar"><X size={24} /></button>
+                    <h2 id={tituloId}>Mesa {pedido.numeroMesa ?? "Avulsa"}</h2>
+                    <button onClick={onClose} className="btn-fechar" aria-label="Fechar detalhes do pedido"><X size={24} /></button>
                 </div>
 
                 <div className="modal-body">
@@ -42,8 +44,8 @@ export function ModalDetalhesPedido({ isOpen, onClose, pedido }: ModalDetalhesPe
                         <span>Total Pago:</span>
                         <span className="valor-total">R$ {pedido.faturamento.toFixed(2)}</span>
                     </div>
-                    <button onClick={() => baixarComandaTxt(pedido)} className="btn-imprimir">
-                        <Printer size={20} /> Imprimir Comanda (.txt)
+                    <button onClick={() => imprimirComanda(pedido)} className="btn-imprimir">
+                        <Printer size={20} /> Imprimir Comanda
                     </button>
                 </div>
             </div>

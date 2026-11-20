@@ -1,25 +1,20 @@
+import type { ItemPedidoDados } from '../interfaces/PedidoDados';
 import { Receipt, Clock } from "lucide-react";
 import "../styles/comandaMesa.css";
 
-interface ItemPedidoResponse {
-    id: number;
-    produtoId: number;
-    produtoNome: string;
-    quantidade: number;
-    precoUnitario: number;
-    status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
-}
-
 interface ComandaMesaProps {
-    itensConsumidos: ItemPedidoResponse[];
+    itensConsumidos: ItemPedidoDados[];
     todosItensProntos: boolean;
     onAbrirPagamento: () => void;
+    pagamentoPermitido?: boolean;
+    aguardandoPagamento?: boolean;
 }
 
 export default function ComandaMesa({
                                         itensConsumidos,
                                         todosItensProntos,
-                                        onAbrirPagamento
+                                        onAbrirPagamento,
+                                        pagamentoPermitido = true, aguardandoPagamento = false
                                     }: ComandaMesaProps) {
 
     // Cálculo do total consumido atualizado
@@ -57,16 +52,16 @@ export default function ComandaMesa({
             {!todosItensProntos && (
                 <div className="comanda-aviso-preparo">
                     <Clock size={16} />
-                    <p>Pedidos em preparo. O pagamento será liberado assim que todos os itens forem entregues na mesa.</p>
+                    <p>Há itens em preparo. A cozinha continuará acompanhando a comanda.</p>
                 </div>
             )}
 
             <button
                 onClick={onAbrirPagamento}
-                disabled={!todosItensProntos}
-                className={`btn-fechamento ${todosItensProntos ? "btn-success" : "btn-disabled"}`}
+                disabled={!pagamentoPermitido || aguardandoPagamento}
+                className={`btn-fechamento ${pagamentoPermitido && !aguardandoPagamento ? "btn-success" : "btn-disabled"}`}
             >
-                {todosItensProntos ? "💳 Encerrar e Pagar" : "⏳ Aguardando Cozinha..."}
+                {aguardandoPagamento ? 'Pagamento já solicitado' : pagamentoPermitido ? '💳 Encerrar e Pagar' : 'Atualize a comanda'}
             </button>
         </div>
     );

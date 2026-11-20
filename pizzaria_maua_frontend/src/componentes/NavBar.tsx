@@ -1,10 +1,13 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useId, useRef } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import bannerImg from "../assets/BannerPizzaria.png";
+import '../styles/dialogo.css';
 
 export default function NavBar() {
     const { user, logout } = useContext(AuthContext);
     const [dropdownAberto, setDropdownAberto] = useState<boolean>(false);
+    const avatar = useRef<HTMLButtonElement>(null);
+    const dropdownId = useId();
 
     const handleLogoutClique = () => {
         if (user?.role === "MESA") {
@@ -33,13 +36,13 @@ export default function NavBar() {
             style={{
                 position: "relative",
                 width: "100%",
-                overflow: "hidden",
                 boxShadow: "0 6px 20px rgba(0,0,0,0.20)",
                 zIndex: 1000,
                 backgroundColor: "#111"
             }}
         >
             {/* Banner */}
+            <div style={{ position: "relative", overflow: "hidden" }}>
             <img
                 src={bannerImg}
                 alt="Banner Pizzaria Mauá"
@@ -65,6 +68,7 @@ export default function NavBar() {
                 }}
             />
 
+            </div>
             {/* Área do usuário */}
             <div
                 style={{
@@ -73,13 +77,21 @@ export default function NavBar() {
                     right: "30px"
                 }}
             >
-                <div style={{ position: "relative" }}>
+                <div style={{ position: "relative" }} onKeyDown={e => {
+                    if (e.key === 'Escape' && dropdownAberto) {
+                        e.preventDefault(); e.stopPropagation(); setDropdownAberto(false); avatar.current?.focus();
+                    }
+                }}>
                     {/* Avatar */}
-                    <div
+                    <button
+                        type="button" ref={avatar} className="nav-avatar"
+                        aria-label={`Opções de ${user?.username || 'usuário'}`}
+                        aria-expanded={dropdownAberto} aria-controls={dropdownAberto ? dropdownId : undefined}
                         onClick={() =>
                             setDropdownAberto(!dropdownAberto)
                         }
                         style={{
+                            padding: 0,
                             width: "56px",
                             height: "56px",
                             borderRadius: "50%",
@@ -100,11 +112,12 @@ export default function NavBar() {
                         }}
                     >
                         {iniciaisUsuario}
-                    </div>
+                    </button>
 
                     {/* Dropdown */}
                     {dropdownAberto && (
                         <div
+                            id={dropdownId}
                             style={{
                                 position: "absolute",
                                 top: "70px",

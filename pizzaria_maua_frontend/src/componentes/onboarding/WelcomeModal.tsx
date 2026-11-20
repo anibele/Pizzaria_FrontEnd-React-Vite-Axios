@@ -2,16 +2,18 @@ import React from 'react';
 import { useOnboarding } from "../../hooks/useOnboarding";
 import { Pizza, Sparkles, X, Play } from 'lucide-react';
 import './onboarding.css';
+import { useDialogo } from '../../hooks/useDialogo';
 
 export const WelcomeModal: React.FC = () => {
     const { status, startTutorial, skipTutorial } = useOnboarding();
+    const [dialogoRef, tituloId] = useDialogo(status === 'WELCOME', skipTutorial);
 
     // Se o status já for FINISHED (recuperado do sessionStorage no F5), o modal não pisca na tela
     if (status !== 'WELCOME') return null;
 
     return (
         <div className="onboarding-backdrop">
-            <div className="onboarding-modal">
+            <div ref={dialogoRef} className="onboarding-modal dialogo-acessivel" role="dialog" aria-modal="true" aria-labelledby={tituloId} tabIndex={-1}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
                     <div style={{ position: 'relative' }}>
                         <Pizza size={56} color="#e11d48" />
@@ -19,7 +21,7 @@ export const WelcomeModal: React.FC = () => {
                     </div>
                 </div>
 
-                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>
+                <h2 id={tituloId} style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>
                     Bem-vindo à Pizzaria Mauá!
                 </h2>
                 <p style={{ color: '#4b5563', fontSize: '15px', marginBottom: '24px', lineHeight: '1.5' }}>

@@ -1,88 +1,43 @@
-import { createContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
+import { controleHttpSessao } from '../services/httpSessao';
+import { SessaoAutenticada } from '../services/sessaoAutenticada';
+import type { UsuarioAutenticado } from '../services/identidadeAutenticada';
 
-// Tipagem do usuário do sistema
-export interface User {
-    username: string;
-    role: 'MESA' | 'COZINHA' | 'GERENTE' | 'CAIXA';
-}
-
-// Resposta esperada do endpoint do Spring Boot
-interface LoginResponse {
-    token: string;
-    role: 'MESA' | 'COZINHA' | 'GERENTE' | 'CAIXA';
-}
-
+export type User = UsuarioAutenticado;
 interface AuthContextType {
     authenticated: boolean;
     user: User | null;
     login: (username: string, senha: string) => Promise<void>;
     logout: () => void;
     loading: boolean;
+    versaoSessao: number;
+    erroSessao: string | null;
+    podeRecuperarSessao: boolean;
+    revalidarSessao: () => Promise<void>;
 }
-
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
     const navigate = useNavigate();
-
-    useEffect(() => {
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-
-        if (storedToken && storedUser) {
-            try {
-                // eslint-disable-next-line react-hooks/set-state-in-effect
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error("Erro ao ler usuário do localStorage, limpando...", e);
-                localStorage.clear();
-            }
-        }
-        setLoading(false);
-    }, []);
-
-    const login = async (username: string, senha: string): Promise<void> => {
-        try {
-            const response = await api.post<LoginResponse>('/auth/login', { username, senha });
-            const { token, role } = response.data;
-
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify({ username, role }));
-
-            setUser({ username, role });
-
-            // --- CORREÇÃO DOS REDIRECIONAMENTOS ---
-            if (role === 'MESA') {
-                navigate('/cardapio');
-            } else if (role === 'COZINHA') {
-                navigate('/pedidos'); // Vai direto para a tela de pedidos
-            } else if (role === 'GERENTE') {
-                navigate('/');        // Vai direto para a tela de produtos
-            } else if (role === 'CAIXA') {
-                navigate('/caixa');   // Vai direto para a tela do caixa
-            }
-
-        } catch (error) {
-            console.error("Erro ao fazer login:", error);
-            // Propaga o erro para o Login.tsx exibir a mensagem vermelha na interface!
-            throw error;
-        }
-    };
-
-    const logout = (): void => {
-        localStorage.clear();
-        setUser(null);
-        navigate('/login');
-    };
-
-    return (
-        <AuthContext.Provider value={{ authenticated: !!user, user, login, logout, loading }}>
-            {!loading && children}
-        </AuthContext.Provider>
-    );
+    const cache = useQueryClient();
+    const gestor = useMemo(() => new SessaoAutenticada(api, {
+        getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value),
+        removeItem: key => localStorage.removeItem(key),
+    }, cache, controleHttpSessao, () => {}), [cache]);
+    useEffect(() => { gestor.definirNavegacao(user => {
+        const destinos = { MESA: '/cardapio', COZINHA: '/pedidos', GERENTE: '/', CAIXA: '/caixa' };
+        navigate(user ? destinos[user.role] : '/login', { replace: true });
+    }); }, [gestor, navigate]);
+    const estado = useSyncExternalStore(gestor.assinar, gestor.obterEstado);
+    useEffect(() => { gestor.ativar(); return gestor.parar; }, [gestor]);
+    useEffect(() => gestor.observarArmazenamento(window, localStorage), [gestor]);
+    return <AuthContext.Provider value={{ authenticated: !!estado.user, user: estado.user, loading: estado.loading,
+        login: gestor.login, logout: gestor.logout, erroSessao: estado.erro, versaoSessao: estado.versao,
+        podeRecuperarSessao: estado.podeRecuperar, revalidarSessao: gestor.revalidar }}>
+        {children}
+    </AuthContext.Provider>;
 }

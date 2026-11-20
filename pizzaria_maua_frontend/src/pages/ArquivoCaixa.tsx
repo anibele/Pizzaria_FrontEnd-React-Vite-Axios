@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { usePedidosPorData } from "../hooks/useDadosArquivo";
 import { adaptarParaCaixa } from "../services/adapter";
-import { baixarComandaTxt } from "../services/gerarComandaTxt";
+import { imprimirComanda } from "../services/gerarComanda.ts";
 import { ModalDetalhesPedido } from "../componentes/ModalDetalhesPedido";
 import type { PedidoCaixaDados } from "../interfaces/PedidoDadosCaixa";
+import { dataFinanceira } from '../services/dataFinanceira';
 
 // Lucide Icons
 import { LayoutGrid, Table, Calendar, Search, Loader2, FileDown, Eye} from "lucide-react";
@@ -17,26 +18,20 @@ import "../styles/arquivoCaixa.css";
 
 export default function ArquivoCaixa() {
     // Inicializa a data filtro padrão com o dia de HOJE no formato YYYY-MM-DD
-    const hojeStr = useMemo(() => {
-        const d = new Date();
-        const ano = d.getFullYear();
-        const mes = String(d.getMonth() + 1).padStart(2, '0');
-        const dia = String(d.getDate()).padStart(2, '0');
-        return `${ano}-${mes}-${dia}`;
-    }, []);
-    const [dataFiltro, setDataFiltro] = useState<string>(hojeStr);
+    // Filtro histórico explícito: começa no dia da pizzaria e não muda sozinho à meia-noite.
+    const [dataFiltro, setDataFiltro] = useState<string>(() => dataFinanceira());
     const [visao, setVisao] = useState<"CARDS" | "TABELA">("CARDS");
     const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoCaixaDados | null>(null);
 
     // Requisição reativa usando o Hook
-    const { data: pedidosBrutos, isLoading } = usePedidosPorData(dataFiltro);
+    const { data: pedidosBrutos, isLoading, isError, refetch } = usePedidosPorData(dataFiltro);
 
     // Filtra e adapta somente os finalizados para exibição uniforme
     const pedidosFinalizados = useMemo(() => {
         if (!pedidosBrutos) return [];
         return pedidosBrutos
-            .filter((p: any) => p.status === "FINALIZADO")
-            .map((p: any) => adaptarParaCaixa(p));
+            .filter(p => p.status === "FINALIZADO")
+            .map(p => adaptarParaCaixa(p));
     }, [pedidosBrutos]);
 
     // Calcula o faturamento retroativo total do dia exibido
@@ -46,7 +41,7 @@ export default function ArquivoCaixa() {
 
     const handleBaixarTxt = (e: React.MouseEvent, pedido: PedidoCaixaDados) => {
         e.stopPropagation(); // Evita abrir o modal de detalhes acidentalmente
-        baixarComandaTxt(pedido);
+        imprimirComanda(pedido);
     };
 
     // --- TEMPLATES CUSTOMIZADOS PARA A DATA TABLE DO PRIMEREACT ---
@@ -78,7 +73,7 @@ export default function ArquivoCaixa() {
             <button
                 className="btn-tabela-acao baixar"
                 onClick={(e) => handleBaixarTxt(e, rowData)}
-                title="Baixar Comanda (.txt)"
+                title="Baixar Comanda"
             >
                 <FileDown size={16} />
             </button>
@@ -104,7 +99,7 @@ export default function ArquivoCaixa() {
 
                 <div className="faturamento-historico-card">
                     <span className="faturamento-label-hist">Total Concluído no Dia</span>
-                    <span className="faturamento-valor-hist">R$ {faturamentoTotalDoDia.toFixed(2)}</span>
+                    <span className="faturamento-valor-hist">{isError ? 'Indisponível' : isLoading ? 'Carregando...' : `R$ ${faturamentoTotalDoDia.toFixed(2)}`}</span>
                 </div>
 
                 <div className="alternador-visao-container">
@@ -130,6 +125,11 @@ export default function ArquivoCaixa() {
                 <div className="loader-arquivo-container">
                     <Loader2 className="animate-spin text-red-600" size={48} />
                     <p>Buscando registros históricos...</p>
+                </div>
+            ) : isError ? (
+                <div className="empty-state" role="alert">
+                    <p>Não foi possível consultar os registros da data selecionada.</p>
+                    <button onClick={() => void refetch()}>Tentar novamente</button>
                 </div>
             ) : pedidosFinalizados.length === 0 ? (
                 <div className="empty-state">
@@ -165,7 +165,7 @@ export default function ArquivoCaixa() {
                                     onClick={(e) => handleBaixarTxt(e, pedido)}
                                 >
                                     <FileDown size={16} />
-                                    Baixar TXT
+                                    Baixar Comanda
                                 </button>
                             </div>
                         </div>

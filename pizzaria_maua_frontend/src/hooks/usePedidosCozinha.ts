@@ -1,16 +1,21 @@
 import api from "../services/api";
 import { useQuery } from "@tanstack/react-query";
 import type { PedidoDados } from "../interfaces/PedidoDados";
+import { adaptarParaCaixa } from '../services/adapter';
+import { buscarPedidosCozinha, CHAVE_COZINHA, preservarItensProntos } from "../services/conclusaoCozinha";
 
-const buscarPedidosCozinha = async (): Promise<PedidoDados[]> => {
-    const response = await api.get<PedidoDados[]>('/pedidos/cozinha');
-    return response.data;
-};
+function validarPedidos(pedidos: PedidoDados[]): PedidoDados[] {
+    if (!Array.isArray(pedidos)) throw new Error('Resposta de pedidos inválida.');
+    pedidos.forEach(adaptarParaCaixa);
+    return pedidos;
+}
 
 export function usePedidosCozinha() {
     return useQuery({
-        queryKey: ["pedidos-cozinha"],
-        queryFn: buscarPedidosCozinha,
+        queryKey: CHAVE_COZINHA,
+        queryFn: ({ signal }): Promise<PedidoDados[]> => buscarPedidosCozinha(api, signal),
+        select: validarPedidos,
+        structuralSharing: preservarItensProntos,
         refetchInterval: 2000,
         staleTime: 0,
         gcTime: 0,             

@@ -1,4 +1,5 @@
 import type { ProdutoDados } from "../interfaces/ProdutoDados";
+import { produtoDisponivel } from '../services/regrasCardapio';
 import { Search, Plus, Leaf } from "lucide-react";
 
 import "../styles/cardProduto.css";
@@ -7,12 +8,14 @@ interface CardProdutoProps {
     produto: ProdutoDados;
     onVerDetalhes: (produto: ProdutoDados) => void;
     onAdicionar: (produto: ProdutoDados) => void;
+    bloqueado?: boolean;
 }
 
 export default function CardProduto({
                                         produto,
                                         onVerDetalhes,
                                         onAdicionar,
+                                        bloqueado = false,
                                     }: CardProdutoProps) {
 
     const ehBebida =
@@ -67,13 +70,14 @@ export default function CardProduto({
 
                 <button
                     className="btn btn-accent"
+                    disabled={bloqueado || !produtoDisponivel(produto)}
                     onClick={(e) => {
                         e.stopPropagation();
                         onAdicionar(produto);
                     }}
                     data-tour="step-2">
                     <Plus size={18} />
-                    <span>Adicionar</span>
+                    <span>{produtoDisponivel(produto) ? 'Adicionar' : 'Indisponível'}</span>
                 </button>
 
             </div>

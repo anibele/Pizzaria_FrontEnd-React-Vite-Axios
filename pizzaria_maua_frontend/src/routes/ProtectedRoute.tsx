@@ -8,9 +8,14 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-    const { authenticated, user, loading } = useContext(AuthContext);
+    const { authenticated, user, loading, erroSessao, podeRecuperarSessao, revalidarSessao, logout } = useContext(AuthContext);
 
     if (loading) return <div>Carregando...</div>;
+    if (!authenticated && podeRecuperarSessao) return <div role="alert">
+        <p>{erroSessao}</p>
+        <button onClick={() => void revalidarSessao()}>Recuperar sessão</button>
+        <button onClick={logout}>Sair</button>
+    </div>;
 
     if (!authenticated) {
         return <Navigate to="/login" replace />;

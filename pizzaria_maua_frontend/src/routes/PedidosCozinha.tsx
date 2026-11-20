@@ -1,3 +1,4 @@
+import type { PedidoDados } from '../interfaces/PedidoDados';
 import { useState, useEffect, useRef } from "react";
 import { usePedidosCozinha } from "../hooks/usePedidosCozinha";
 import { usePedidoItemStatus } from "../hooks/usePedidoItemStatus";
@@ -8,40 +9,19 @@ import { Loader2, AlertCircle, CheckCircle2, BrickWallFire, Zap } from "lucide-r
 import { calcularPrioridadeKds } from "../services/kdsCalculadora";
 import "../styles/pedidosCozinha.css";
 
-interface ItemPedidoCozinha {
-    id: number;
-    produtoId: number;
-    produtoNome: string;
-    quantidade: number;
-    precoUnitario: number;
-    status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
-    dataHoraInclusao: string;
-    tempoPreparoMinutos: number;
-}
-
-interface PedidoCozinhaDados {
-    id: number;
-    numeroMesa: number;
-    dataHora: string;
-    status: "ABERTO" | "AGUARDANDO_PAGAMENTO" | "FINALIZADO";
-    formaPagamento: string;
-    itens: ItemPedidoCozinha[];
-}
-
 const LIMITE_MINUTOS_RAPIDO = 15;
 
 export default function PedidosCozinha() {
     const { data, isLoading, isError } = usePedidosCozinha();
-    const { mutate: atualizarStatus } = usePedidoItemStatus();
+    const { operacoes, concluir, verificar } = usePedidoItemStatus();
     const { adicionarNotificacao } = useNotification();
 
-    const [itensDespachados, setItensDespachados] = useState<number[]>([]);
     const [, setTickTempo] = useState(0);
 
-    const prevPedidosRef = useRef<PedidoCozinhaDados[]>([]);
+    const prevPedidosRef = useRef<PedidoDados[]>([]);
     const isFirstLoadRef = useRef(true);
 
-    const pedidosOriginais = (data as unknown as PedidoCozinhaDados[]) || [];
+    const pedidosOriginais = data ?? [];
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -52,7 +32,7 @@ export default function PedidosCozinha() {
 
     useEffect(() => {
         if (isLoading || isError || !data) return;
-        const novosPedidos = data as unknown as PedidoCozinhaDados[];
+        const novosPedidos = data;
 
         if (isFirstLoadRef.current) {
             prevPedidosRef.current = novosPedidos;
@@ -70,7 +50,7 @@ export default function PedidosCozinha() {
                     adicionarNotificacao("ITENS_ADICIONADOS", newPedido.numeroMesa);
                 }
                 if (newPedido.status === "AGUARDANDO_PAGAMENTO" && oldPedido.status !== "AGUARDANDO_PAGAMENTO") {
-                    adicionarNotificacao("PAGAMENTO", newPedido.numeroMesa, newPedido.formaPagamento);
+                    adicionarNotificacao("PAGAMENTO", newPedido.numeroMesa, newPedido.formaPagamento ?? undefined);
                 }
             }
         });
@@ -79,8 +59,7 @@ export default function PedidosCozinha() {
     }, [data, isLoading, isError, adicionarNotificacao]);
 
     const handleMarcarComoEntregue = (itemId: number) => {
-        setItensDespachados((prev) => [...prev, itemId]);
-        atualizarStatus({ itemId, status: "PRONTO" });
+        void concluir(itemId);
     };
 
     // MOTOR DE ROTEAMENTO E ORDENAÇÃO
@@ -89,7 +68,7 @@ export default function PedidosCozinha() {
             .map(pedido => {
                 // 1. Filtra apenas os itens que pertencem a esta coluna e não estão prontos
                 const itensFiltrados = pedido.itens.filter(item => {
-                    const isAtivo = item.status !== "PRONTO" && !itensDespachados.includes(item.id);
+                    const isAtivo = item.status !== "PRONTO";
                     const isRapido = item.tempoPreparoMinutos <= LIMITE_MINUTOS_RAPIDO;
                     return isAtivo && (tipoDaColuna === 'RAPIDO' ? isRapido : !isRapido);
                 });
@@ -139,7 +118,7 @@ export default function PedidosCozinha() {
         );
     }
 
-    if (isError) {
+    if (isError && !data) {
         return (
             <div className="cozinha-tela-mensagem erro">
                 <AlertCircle size={64} color="#d32f2f" />
@@ -152,6 +131,7 @@ export default function PedidosCozinha() {
     return (
         <div className="cozinha-dashboard-bg">
             <NavbarCozinha />
+            {isError && <p role="alert">Não foi possível atualizar a fila. Exibindo os últimos dados confirmados; confira a conexão antes de concluir os itens.</p>}
 
             <main className="cozinha-main-content split-layout">
                 {/* COLUNA ESQUERDA: ITENS RÁPIDOS */}
@@ -172,8 +152,9 @@ export default function PedidosCozinha() {
                                 <CardPedidoCozinha
                                     key={`rapido-${pedido.id}`}
                                     pedido={pedido}
-                                    itensDespachados={itensDespachados}
+                                    operacoes={operacoes}
                                     onMarcarComoEntregue={handleMarcarComoEntregue}
+                                    onVerificar={(itemId) => { void verificar(itemId); }}
                                 />
                             ))}
                         </div>
@@ -202,8 +183,9 @@ export default function PedidosCozinha() {
                                 <CardPedidoCozinha
                                     key={`lento-${pedido.id}`}
                                     pedido={pedido}
-                                    itensDespachados={itensDespachados}
+                                    operacoes={operacoes}
                                     onMarcarComoEntregue={handleMarcarComoEntregue}
+                                    onVerificar={(itemId) => { void verificar(itemId); }}
                                 />
                             ))}
                         </div>

@@ -1,14 +1,17 @@
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { lazy } from 'react';
+import RotaSobDemanda from '../componentes/RotaSobDemanda';
 import { ProtectedRoute } from "./ProtectedRoute";
 import Login from "../pages/Login";
-import DashboardGerente from "../pages/DashboardGerente";
 import ProdutosGerente from "./ProdutosGerente";
 import MesasGerente from "./MesasGerente";
 import PedidosCozinha from "./PedidosCozinha";
 import CardapioCliente from "./CardapioCliente";
 import DashboardCaixa from "../pages/DashboardCaixa";
-import ArquivoCaixa from "../pages/ArquivoCaixa";
 import MenuCaixa from "../componentes/MenuCaixa";
+
+const DashboardGerente = lazy(() => import('../pages/DashboardGerente'));
+const ArquivoCaixa = lazy(() => import('../pages/ArquivoCaixa'));
 
 export default function AppRoutes() {
     return (
@@ -24,7 +27,7 @@ export default function AppRoutes() {
                 path="/dashboard"
                 element = {
                     <ProtectedRoute allowedRoles={["GERENTE"]}>
-                        <DashboardGerente />
+                        <RotaSobDemanda><DashboardGerente /></RotaSobDemanda>
                     </ProtectedRoute>
                 }
             />
@@ -76,7 +79,7 @@ export default function AppRoutes() {
                 <Route index element={<DashboardCaixa />} />
 
                 {/* Sub-rota: /caixa/arquivo */}
-                <Route path="arquivo" element={<ArquivoCaixa />} />
+                <Route path="arquivo" element={<RotaSobDemanda><ArquivoCaixa /></RotaSobDemanda>} />
             </Route>
 
             {/* 📱 Rota do Cardápio Digital (Exclusiva para os tablets das Mesas) */}

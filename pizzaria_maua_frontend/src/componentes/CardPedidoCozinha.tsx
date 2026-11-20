@@ -1,34 +1,18 @@
-import { UtensilsCrossed, Check } from "lucide-react";
+import type { PedidoDados } from '../interfaces/PedidoDados';
+import { UtensilsCrossed, Check, Loader2, RefreshCw } from "lucide-react";
+import type { EstadoConclusaoItem } from "../services/conclusaoCozinha";
 import BadgeTimerKds from "./BadgeTimerKds";
 import { calcularPrioridadeKds, type KdsStatus } from "../services/kdsCalculadora";
 import "../styles/cardPedidoCozinha.css";
 
-interface ItemPedidoCozinha {
-    id: number;
-    produtoId: number;
-    produtoNome: string;
-    quantidade: number;
-    precoUnitario: number;
-    status: "PENDENTE" | "EM_PREPARO" | "PRONTO";
-    dataHoraInclusao: string;
-    tempoPreparoMinutos: number;
-}
-
-interface PedidoCozinhaDados {
-    id: number;
-    numeroMesa: number;
-    dataHora: string;
-    formaPagamento: string;
-    itens: ItemPedidoCozinha[];
-}
-
 interface CardPedidoCozinhaProps {
-    pedido: PedidoCozinhaDados;
-    itensDespachados: number[];
+    pedido: PedidoDados;
+    operacoes: Record<number, EstadoConclusaoItem>;
     onMarcarComoEntregue: (itemId: number) => void;
+    onVerificar: (itemId: number) => void;
 }
 
-export default function CardPedidoCozinha({ pedido, itensDespachados, onMarcarComoEntregue }: CardPedidoCozinhaProps) {
+export default function CardPedidoCozinha({ pedido, operacoes, onMarcarComoEntregue, onVerificar }: CardPedidoCozinhaProps) {
     // Ordena os itens do mais urgente (menor tempo restante) para o menos urgente
     const itensOrdenados = [...pedido.itens].sort((a, b) => {
         const calcA = calcularPrioridadeKds(a.dataHoraInclusao, a.tempoPreparoMinutos);
@@ -61,30 +45,32 @@ export default function CardPedidoCozinha({ pedido, itensDespachados, onMarcarCo
 
             <ul className="card-cozinha-lista">
                 {itensOrdenados.map((item) => {
-                    const foiClicado = itensDespachados.includes(item.id);
+                    const operacao = operacoes[item.id];
                     const calculo = calcularPrioridadeKds(item.dataHoraInclusao, item.tempoPreparoMinutos);
 
                     return (
-                        <li key={item.id} className={`item-cozinha ${foiClicado ? "item-despachado" : ""}`}>
+                        <li key={item.id} className="item-cozinha">
                             <div className="item-info">
                                 <span className="item-qtd">{item.quantidade}x</span>
                                 <div className="item-nome-container">
                                     <span className="item-nome">{item.produtoNome}</span>
-                                    {!foiClicado && (
-                                        <BadgeTimerKds
-                                            status={calculo.status}
-                                            minutosRestantes={calculo.minutosRestantes}
-                                        />
-                                    )}
+                                    <BadgeTimerKds
+                                        status={calculo.status}
+                                        minutosRestantes={calculo.minutosRestantes}
+                                    />
+                                    {operacao?.mensagem && <span role={operacao.processando ? 'status' : 'alert'}>{operacao.mensagem}</span>}
                                 </div>
                             </div>
 
                             <button
                                 className="btn-entregar"
-                                onClick={() => onMarcarComoEntregue(item.id)}
-                                disabled={foiClicado}
+                                onClick={() => operacao?.verificar ? onVerificar(item.id) : onMarcarComoEntregue(item.id)}
+                                disabled={operacao?.processando}
+                                aria-label={operacao?.verificar ? 'Verificar estado do item' : 'Concluir item'}
+                                aria-busy={operacao?.processando || false}
                             >
-                                <Check size={22} strokeWidth={3} />
+                                {operacao?.processando ? <Loader2 size={22} className="animate-spin" />
+                                    : operacao?.verificar ? <RefreshCw size={22} /> : <Check size={22} strokeWidth={3} />}
                             </button>
                         </li>
                     );
