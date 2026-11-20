@@ -20,6 +20,59 @@
     margin: 0;
 }
 
+.dashboard-container > .p-tabview .p-tabview-nav {
+    justify-content: center;
+    gap: 16px;
+    padding: 8px 4px 0;
+}
+
+.dashboard-container > .p-tabview .p-tabview-nav > li:not(.p-tabview-ink-bar) {
+    flex: 0 1 260px;
+    min-width: 0;
+}
+
+.dashboard-container > .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 20px;
+    white-space: nowrap;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.dashboard-container > .p-tabview .p-tabview-nav-link > .pi {
+    margin-right: 0;
+    flex-shrink: 0;
+}
+
+.dashboard-container > .p-tabview .p-tabview-nav li .p-tabview-nav-link:not(.p-disabled):focus-visible {
+    outline: 2px solid var(--primary-hover, #c62828);
+    outline-offset: -4px;
+}
+
+@media (max-width: 480px) {
+    .dashboard-container > .p-tabview .p-tabview-nav {
+        gap: 4px;
+    }
+
+    .dashboard-container > .p-tabview .p-tabview-nav > li:not(.p-tabview-ink-bar) {
+        flex: 1 1 auto;
+    }
+
+    .dashboard-container > .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+        gap: 6px;
+        padding: 14px 4px;
+        font-size: 0.75rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-container > .p-tabview .p-tabview-nav li .p-tabview-nav-link,
+    .dashboard-container > .p-tabview .p-tabview-ink-bar {
+        transition: none;
+    }
+}
+
 /* Grid de Métricas (Topo) */
 .dashboard-metrics-grid {
     display: grid;
