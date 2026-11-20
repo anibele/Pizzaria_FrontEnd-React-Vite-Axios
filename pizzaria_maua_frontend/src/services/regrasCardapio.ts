@@ -18,7 +18,8 @@ export function motivoNovosItens(mesa: MesaDados | undefined, pedido: PedidoDado
 }
 
 export function podeSolicitarPagamento(mesa: MesaDados | undefined, pedido: PedidoDados | null | undefined): boolean {
-    return !!pedido && pedido.status === 'ABERTO' && !!mesa?.ativo && mesa.status === 'OCUPADA' && pedido.numeroMesa === mesa.numero;
+    return !!pedido && pedido.itens.length > 0 && pedido.itens.every(item => item.status === 'PRONTO')
+        && pedido.status === 'ABERTO' && !!mesa?.ativo && mesa.status === 'OCUPADA' && pedido.numeroMesa === mesa.numero;
 }
 
 export function produtoDisponivel(produto: ProdutoDados | undefined, quantidade = 1): boolean {

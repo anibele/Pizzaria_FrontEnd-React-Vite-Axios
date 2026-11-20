@@ -27,7 +27,8 @@ import { TutorialOverlay } from "../componentes/onboarding/TutorialOverlay";
 import TelaInicio from "../pages/TelaInicio";
 import {
     AlertCircle,
-    Loader2
+    Loader2,
+    RefreshCw
 } from "lucide-react";
 import "../styles/cardapio.css";
 
@@ -118,8 +119,9 @@ function CardapioConteudo({
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isModalAvisoOpen, setIsModalAvisoOpen] = useState<boolean>(false);
 
-    const { data: produtos, isLoading: loadingProdutos, isError: erroProdutos, refetch: atualizarProdutos } = useProdutosAtivos();
-    const { data: pedidoAtivo, isLoading: loadingPedido, isError: erroPedido, refetch: refetchPedido } = usePedidoMesaAberto(numeroMesa);
+    const { data: produtos, isLoading: loadingProdutos, isFetching: atualizandoProdutos, isError: erroProdutos, refetch: atualizarProdutos } = useProdutosAtivos();
+    const { data: pedidoAtivo, isLoading: loadingPedido, isFetching: atualizandoPedido, isError: erroPedido, refetch: refetchPedido } = usePedidoMesaAberto(numeroMesa);
+    const leituraEmCurso = useRef(false);
     const abertura = usePedidoCriar(numeroMesa);
     const criando = abertura.processando;
     const { bloqueiaCarrinho: bloqueiaAbertura, protegida: aberturaProtegida } = abertura;
@@ -131,6 +133,22 @@ function CardapioConteudo({
     const reiniciarPagamento = pagamento.reiniciar;
     const bloqueioEstado = motivoNovosItens(mesaStatusData, pedidoAtivo);
     const bloqueioEstoque = carrinho.length && !existePendencia ? motivoSelecao(carrinho, produtos ?? []) : null;
+    const recuperandoLeituras = atualizandoPedido || atualizandoProdutos;
+    const conferirAdicaoIncerta = !!adicao.pendente && !adicionando && !adicao.podeRevisar;
+    const acaoAtualizacao = (erroPedido || erroProdutos || conferirAdicaoIncerta) && (
+        <button type="button" className="btn btn-secondary pedido-atualizar"
+            aria-busy={recuperandoLeituras} aria-disabled={recuperandoLeituras}
+            onClick={() => {
+                if (leituraEmCurso.current || recuperandoLeituras) return;
+                leituraEmCurso.current = true;
+                void Promise.allSettled([
+                    refetchPedido({ cancelRefetch: false }), atualizarProdutos({ cancelRefetch: false }),
+                ]).finally(() => { leituraEmCurso.current = false; });
+            }}>
+            <RefreshCw size={16} aria-hidden="true" />
+            <span>Atualizar comanda e cardápio</span>
+        </button>
+    );
     const podeAdicionar = (produto: ProdutoDados) => !bloqueioEstado && !existePendencia
         && produtoDisponivel(produtos?.find(p => p.id === produto.id), (carrinho.find(i => i.produto.id === produto.id)?.quantidade ?? 0) + 1);
 
@@ -261,7 +279,7 @@ function CardapioConteudo({
     const todosItensProntos = possuiItensConsumidos && itensConsumidos.every(item => item.status === "PRONTO");
 
     const handleSolicitarPagamento = () => {
-        if (!podeSolicitarPagamento(mesaStatusData, pedidoAtivo)) return;
+        if (!todosItensProntos || !podeSolicitarPagamento(mesaStatusData, pedidoAtivo)) return;
         if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         if (carrinho.length > 0) {
             setIsModalAvisoOpen(true);
@@ -272,7 +290,7 @@ function CardapioConteudo({
     };
 
     const handleDescartarEPagar = () => {
-        if (!podeSolicitarPagamento(mesaStatusData, pedidoAtivo)) return;
+        if (!todosItensProntos || !podeSolicitarPagamento(mesaStatusData, pedidoAtivo)) return;
         if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         if (!limparCarrinho()) return;
         setIsModalAvisoOpen(false);
@@ -281,6 +299,7 @@ function CardapioConteudo({
     };
 
     const handleEnviarSolicitacaoPagamento = async (formaPagamentoSelecionada: 'PIX' | 'CARTAO' | 'DINHEIRO') => {
+        if (!todosItensProntos || !podeSolicitarPagamento(mesaStatusData, pedidoAtivo)) return;
         if (bloqueiaAbertura() || adicao.bloqueiaCarrinho() || envioEmCurso.current) return;
         await pagamento.solicitar(pedidoAtivo?.id, formaPagamentoSelecionada);
     };
@@ -302,7 +321,7 @@ function CardapioConteudo({
     </div>;
     if (erroPedido) return <div className="error-card" role="alert">
         <p>Não foi possível consultar a comanda. A ausência de pedido não foi confirmada e a seleção foi preservada.</p>
-        <button onClick={() => void refetchPedido()}>Tentar novamente</button>
+        {acaoAtualizacao}
     </div>;
 
     if (!existePendencia && (mesaStatusData?.status === "MANUTENCAO" || mesaStatusData?.ativo === false)) {
@@ -337,10 +356,11 @@ function CardapioConteudo({
 
     if (erroProdutos) {
         return (
-            <div className="error-card">
+            <div className="error-card" role="alert">
                 <AlertCircle size={48} color="#d32f2f" style={{ marginBottom: '16px' }} />
                 <h2>Não foi possível carregar o cardápio</h2>
                 <p>O tablet falhou ao tentar buscar os produtos ativos.</p>
+                {acaoAtualizacao}
             </div>
         );
     }
@@ -387,8 +407,8 @@ function CardapioConteudo({
                         motivoEstoque={bloqueioEstoque || null}
                         produtosAtuais={produtos}
                         pagamentoPermitido={podeSolicitarPagamento(mesaStatusData, pedidoAtivo)}
+                        acaoAtualizacao={acaoAtualizacao}
                     />
-                    {(bloqueioEstado || bloqueioEstoque || adicao.mensagem) && <button onClick={() => { void refetchPedido(); void atualizarProdutos(); }}>Atualizar comanda e cardápio</button>}
                 </div>
 
                 <ModalPagamento

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Pizza, Armchair, ChefHat, TrendingUp, Wrench, MonitorCog } from "lucide-react";
+import { useCallback, useRef } from 'react';
+import { LayoutDashboard, Pizza, Armchair, ChefHat, TrendingUp, Wrench, MonitorCog, RefreshCw } from "lucide-react";
 // Importações do PrimeReact
 import { TabView, TabPanel } from 'primereact/tabview';
 import PainelAnalitico from "./PainelAnalitico";
@@ -11,6 +12,15 @@ export default function DashboardGerente() {
     const hojeStr = useDataFinanceira();
 
     const { data: faturamentoDia, isPending, isFetching, isError, isSuccess, refetch } = useFaturamentoDiario(hojeStr);
+    const resultadoFaturamento = useRef<HTMLParagraphElement>(null);
+    const registrarRecuperacao = useCallback((botao: HTMLButtonElement | null) => {
+        if (!botao) return;
+        return () => {
+            if (document.activeElement === botao && resultadoFaturamento.current?.isConnected) {
+                resultadoFaturamento.current.focus({ preventScroll: true });
+            }
+        };
+    }, []);
 
     return (
         <div className="dashboard-container animate-fade-in">
@@ -27,17 +37,20 @@ export default function DashboardGerente() {
                 <TabPanel header="Visão Geral" leftIcon="pi pi-home mr-2">
 
                     <section className="dashboard-metrics-grid mt-4">
-                        <div className="metric-card">
+                        <div className="metric-card metric-card--faturamento">
                             <div className="metric-icon-wrapper" style={{ backgroundColor: '#fff0f0', color: '#e53935' }}>
                                 <TrendingUp size={24} />
                             </div>
                             <div className="metric-info">
                                 <h3>Caixa - Vendas de Hoje</h3>
-                                <p role="status">{isError ? 'Indisponível' : isPending ? 'Carregando...' :
+                                <p ref={resultadoFaturamento} role="status" tabIndex={-1}>{isError ? 'Indisponível' : isPending ? 'Carregando...' :
                                     isSuccess && faturamentoDia !== undefined ? `R$ ${faturamentoDia.toFixed(2)}` : 'Indisponível'}</p>
-                                <button type="button" aria-busy={isFetching} aria-disabled={isFetching}
-                                    onClick={() => { if (!isFetching) void refetch(); }}>Atualizar faturamento</button>
                                 <span className="metric-hint">Acesse o caixa para detalhes</span>
+                                {isError && <button ref={registrarRecuperacao} type="button" className="btn btn-secondary metric-refresh" aria-busy={isFetching} aria-disabled={isFetching}
+                                    onClick={() => { if (!isFetching) void refetch(); }}>
+                                    <RefreshCw size={16} aria-hidden="true" />
+                                    <span>Atualizar faturamento</span>
+                                </button>}
                             </div>
                         </div>
 

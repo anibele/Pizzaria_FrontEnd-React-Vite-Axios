@@ -31,11 +31,13 @@ function preparar(t) {
 test('Gerente financeiro: loading não apresenta zero como valor confirmado', t => {
     const s = preparar(t), html = s.renderizar();
     assert.match(html, /Carregando/); assert.doesNotMatch(html, /R\$ 0\.00/);
+    assert.doesNotMatch(html, /Atualizar faturamento/);
 });
 for (const valor of [0, 123.45]) test(`Gerente financeiro: sucesso válido ${valor}`, t => {
     const s = preparar(t); s.cache.setQueryData(s.chave, valor);
     const html = s.renderizar();
     assert.ok(html.includes(`R$ ${valor.toFixed(2)}`)); assert.doesNotMatch(html, /Indisponível/);
+    assert.doesNotMatch(html, /Atualizar faturamento/);
 });
 test('Gerente financeiro: erro inicial oferece recuperação e não inventa zero', async t => {
     const s = preparar(t);
@@ -49,6 +51,7 @@ test('Gerente financeiro: erro após sucesso não apresenta cache antigo como at
     assert.equal(s.cache.getQueryData(s.chave), 245);
     const html = s.renderizar();
     assert.match(html, /Indisponível/); assert.doesNotMatch(html, /R\$ 245\.00|R\$ 0\.00/);
+    assert.match(html, /Atualizar faturamento/);
 });
 test('Gerente financeiro: data do dispositivo não escolhe a chave do faturamento', t => {
     const tz = process.env.TZ;

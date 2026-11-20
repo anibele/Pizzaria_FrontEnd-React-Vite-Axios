@@ -25,17 +25,35 @@ test('FE012: somente mesa ativa LIVRE abre pedido; pedido ABERTO requer mesa OCU
         [mesa(),pedido({ status: 'AGUARDANDO_PAGAMENTO' })], [mesa(),pedido({ status: 'FINALIZADO' })],
         [mesa({ status: 'LIVRE' }),pedido()], [mesa(),pedido({ numeroMesa: 9 })], [undefined,undefined]]) assert.ok(motivoNovosItens(m,p));
 });
-test('FE012: pagamento em ABERTO nao exige itens PRONTO, mas respeita estado e mesa', () => {
-    assert.equal(podeSolicitarPagamento(mesa(),pedido({ itens: [item] })),true);
-    for (const p of [null,pedido({ status: 'AGUARDANDO_PAGAMENTO' }),pedido({ status: 'FINALIZADO' }),pedido({ numeroMesa: 9 })]) assert.equal(podeSolicitarPagamento(mesa(),p),false);
-    assert.equal(podeSolicitarPagamento(mesa({ ativo: false }),pedido()),false);
+test('Pagamento exige itens PRONTO e preserva estado e mesa', () => {
+    for (const estados of [[], ['PENDENTE'], ['EM_PREPARO'], ['PENDENTE','PRONTO'], ['EM_PREPARO','PRONTO'], ['PRONTO','PRONTO']]) {
+        const itens = estados.map(status => ({ ...item, status }));
+        const pronto = estados.length > 0 && estados.every(status => status === 'PRONTO');
+        assert.equal(podeSolicitarPagamento(mesa(),pedido({ itens })),pronto);
+    }
+    const itens = [{ ...item, status: 'PRONTO' }];
+    for (const p of [null,pedido({ itens, status: 'AGUARDANDO_PAGAMENTO' }),pedido({ itens, status: 'FINALIZADO' }),pedido({ itens, numeroMesa: 9 })]) assert.equal(podeSolicitarPagamento(mesa(),p),false);
+    for (const m of [mesa({ ativo: false }),mesa({ status: 'LIVRE' }),undefined]) assert.equal(podeSolicitarPagamento(m,pedido({ itens })),false);
 });
-test('FE012: botoes reais permitem fechamento em preparo e impedem repetir solicitacao ja confirmada', () => {
-    const base = { itensConsumidos: [item], todosItensProntos: false, onAbrirPagamento() {} };
-    const aberto = renderToStaticMarkup(createElement(ComandaMesa,{ ...base, pagamentoPermitido: true }));
-    assert.match(aberto,/Encerrar e Pagar/); assert.doesNotMatch(aberto,/disabled=""/);
-    const esperando = renderToStaticMarkup(createElement(ComandaMesa,{ ...base, pagamentoPermitido: false, aguardandoPagamento: true }));
-    assert.match(esperando,/Pagamento já solicitado/); assert.match(esperando,/disabled=""/);
+
+test('Comanda real bloqueia preparo e libera somente itens prontos com demais permissoes', () => {
+    for (const estados of [[], ['PENDENTE'], ['EM_PREPARO'], ['PENDENTE','PRONTO'], ['PRONTO','PRONTO']]) {
+        const pronto = estados.length > 0 && estados.every(status => status === 'PRONTO');
+        const props = { itensConsumidos: estados.map(status => ({ ...item, status })), todosItensProntos: pronto, onAbrirPagamento() {} };
+        const html = renderToStaticMarkup(createElement(ComandaMesa, props));
+        assert.equal(html.includes('disabled=""'), !pronto);
+        if (!pronto) assert.match(html,/O pagamento ser\u00e1 liberado/);
+        for (const extra of [{ pagamentoPermitido: false },{ aguardandoPagamento: true }]) {
+            assert.match(renderToStaticMarkup(createElement(ComandaMesa,{ ...props, ...extra })),/disabled=""/);
+        }
+    }
+    // A guarda do handler protege inclusive uma invocacao direta sem clicar no botao.
+    for (const pronto of [false,true]) {
+        let chamadas = 0;
+        const arvore = ComandaMesa({ itensConsumidos: [{ ...item, status: pronto ? 'PRONTO' : 'PENDENTE' }], todosItensProntos: pronto, onAbrirPagamento() { chamadas++; } });
+        arvore.props.children.at(-1).props.onClick();
+        assert.equal(chamadas, pronto ? 1 : 0);
+    }
 });
 test('FE012: estoque e atividade sao verificados para todas as categorias sem excecao inventada', () => {
     for (const categoria of ['PIZZAS','BEBIDAS','SOBREMESAS','ACOMPANHAMENTOS']) {

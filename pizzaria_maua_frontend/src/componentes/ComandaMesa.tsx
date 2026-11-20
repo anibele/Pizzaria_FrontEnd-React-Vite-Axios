@@ -17,6 +17,8 @@ export default function ComandaMesa({
                                         pagamentoPermitido = true, aguardandoPagamento = false
                                     }: ComandaMesaProps) {
 
+    const podePagar = todosItensProntos && itensConsumidos.length > 0 && pagamentoPermitido && !aguardandoPagamento;
+
     // Cálculo do total consumido atualizado
     const totalContaAtual = itensConsumidos.reduce((acc, i) => {
         return acc + (i.precoUnitario * i.quantidade);
@@ -52,14 +54,14 @@ export default function ComandaMesa({
             {!todosItensProntos && (
                 <div className="comanda-aviso-preparo">
                     <Clock size={16} />
-                    <p>Há itens em preparo. A cozinha continuará acompanhando a comanda.</p>
+                    <p>Pedidos em preparo. O pagamento será liberado assim que todos os itens forem entregues na mesa.</p>
                 </div>
             )}
 
             <button
-                onClick={onAbrirPagamento}
-                disabled={!pagamentoPermitido || aguardandoPagamento}
-                className={`btn-fechamento ${pagamentoPermitido && !aguardandoPagamento ? "btn-success" : "btn-disabled"}`}
+                onClick={() => { if (podePagar) onAbrirPagamento(); }}
+                disabled={!podePagar}
+                className={`btn-fechamento ${podePagar ? "btn-success" : "btn-disabled"}`}
             >
                 {aguardandoPagamento ? 'Pagamento já solicitado' : pagamentoPermitido ? '💳 Encerrar e Pagar' : 'Atualize a comanda'}
             </button>

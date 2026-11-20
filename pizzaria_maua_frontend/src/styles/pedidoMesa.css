@@ -138,3 +138,35 @@
     font-weight: 600;
     color: #333;
 }
+
+.pedido-atualizacao {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.pedido-atualizar {
+    width: 100%;
+    min-height: 44px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.pedido-atualizar svg {
+    flex-shrink: 0;
+}
+
+.pedido-atualizar:focus-visible {
+    outline: 2px solid var(--primary-hover, #c62828);
+    outline-offset: 3px;
+}
+
+.pedido-atualizar:disabled,
+.pedido-atualizar[aria-disabled="true"] {
+    background-color: var(--bg-light, #f8f9fa);
+    opacity: 0.65;
+    cursor: not-allowed;
+}

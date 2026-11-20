@@ -73,6 +73,46 @@
     color: #94a3b8;
 }
 
+.metric-card--faturamento .metric-icon-wrapper {
+    flex-shrink: 0;
+}
+
+.metric-card--faturamento .metric-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.metric-card--faturamento .metric-hint {
+    display: block;
+}
+
+.metric-refresh {
+    min-height: 44px;
+    max-width: 100%;
+    margin-top: 12px;
+    font-family: inherit;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.metric-refresh svg {
+    flex-shrink: 0;
+}
+
+.metric-refresh:focus-visible,
+.metric-card--faturamento [role="status"]:focus-visible {
+    outline: 2px solid var(--primary-hover, #c62828);
+    outline-offset: 3px;
+}
+
+.metric-refresh:disabled,
+.metric-refresh[aria-disabled="true"] {
+    background-color: var(--bg-light, #f8f9fa);
+    opacity: 0.65;
+    cursor: wait;
+}
+
 /* Seção de Acesso Rápido */
 .section-title {
     display: flex;

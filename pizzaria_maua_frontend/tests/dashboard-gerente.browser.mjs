@@ -108,13 +108,20 @@ try {
     async function liberar(data,valor,codigo=200){const lista=retidas.filter(r=>r.data===data);retidas.splice(0,retidas.length,...retidas.filter(r=>r.data!==data));for(const r of lista)await responder(r.requestId,codigo,valor);}
     async function atualizar(){await avaliar(`document.querySelector('.metric-info button').focus()`);await cdp('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});await cdp('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});}
     modo='retido';await abrir('loading');await ate(()=>retidas.length>0);
-    let f=await cartao();verificar(f.valor==='Carregando...'&&!f.valor.includes('0.00'),'Loading não inventa zero',f);
-    modo='valor';valor=123.45;await liberar('2026-11-19',valor);await valorExibido('R$ 123.45');verificar(true,'Valor positivo confirmado');
-    valor=0;await abrir('zero');await valorExibido('R$ 0.00');verificar((await cartao()).valor==='R$ 0.00','Zero legítimo continua válido');
+    let f=await cartao();verificar(f.valor==='Carregando...'&&!f.valor.includes('0.00')&&!f.botao,'Loading não inventa zero nem apresenta recuperação',f);
+    modo='valor';valor=123.45;await liberar('2026-11-19',valor);await valorExibido('R$ 123.45');verificar(!(await cartao()).botao,'Valor positivo sem botão permanente');
+    modo='retido';await consultar();await ate(()=>retidas.length>0);f=await cartao();
+    verificar(f.valor==='R$ 123.45'&&!f.botao,'Refetch automático normal preserva valor sem botão',f);
+    modo='valor';await liberar('2026-11-19',123.45);
+    valor=0;await abrir('zero');await valorExibido('R$ 0.00');f=await cartao();verificar(f.valor==='R$ 0.00'&&!f.botao,'Zero legítimo sem botão permanente',f);
     for(const [nome,m,v] of [['http500','500',null],['conexao','rede',null],['nulo','valor',null],['objeto','valor',{}],['string','valor','123.45'],['http404','404',null]]){
         modo=m;valor=v;await abrir(nome);await ate(()=>consultas.filter(q=>q.fase===nome).length>=4);await valorExibido('Indisponível');f=await cartao();
         verificar(f.botao==='Atualizar faturamento'&&!f.valor.includes('R$'),`${nome}: erro explícito e recuperação`,f);
     }
+    modo='retido';await atualizar();await ate(()=>retidas.length>0);await valorExibido('Carregando...');
+    verificar(await avaliar(`!document.querySelector('.metric-refresh')&&document.activeElement===document.querySelector('.metric-info p')`),'Retry sem cache mantém foco no resultado durante loading');
+    modo='valor';await liberar('2026-11-19',27);await valorExibido('R$ 27.00');
+    verificar(await avaliar(`!document.querySelector('.metric-refresh')&&document.activeElement===document.querySelector('.metric-info p')`),'Recuperação sem cache remove botão e preserva destino de foco');
     // Erro de refetch conserva data no QueryClient; a apresentação deve priorizar isError.
     modo='valor';valor=245;await abrir('cache');await valorExibido('R$ 245.00');fase='cache-erro';modo='500';await consultar();
     await ate(()=>consultas.filter(q=>q.fase===fase).length>=4);await valorExibido('Indisponível');verificar(true,'Erro após sucesso não confirma valor antigo');
@@ -123,8 +130,12 @@ try {
     verificar((await cartao()).focoBotao,'Foco preservado durante atualização');
     await atualizar();await avaliar(`document.querySelector('.metric-info button').click()`);await pausa(80);
     verificar(consultas.length===antes+1,'Atualização pendente não duplica GET');
-    modo='valor';valor=18;await liberar('2026-11-19',18);await valorExibido('R$ 18.00');verificar((await cartao()).focoBotao,'Recuperação mantém foco no controle');
+    modo='valor';valor=18;await liberar('2026-11-19',18);await valorExibido('R$ 18.00');
+    verificar(await avaliar(`!document.querySelector('.metric-refresh')&&document.activeElement===document.querySelector('.metric-info p')`),'Recuperação remove botão e transfere foco ao resultado');
     valor=0;await consultar();await valorExibido('R$ 0.00');verificar(true,'Polling de leitura recupera zero válido');
+    modo='500';await consultar();await ate(()=>consultas.filter(q=>q.fase===fase).length>=4);await valorExibido('Indisponível');
+    await avaliar(`document.querySelector('.metric-refresh').focus()`);modo='valor';valor=0;await consultar();await valorExibido('R$ 0.00');
+    verificar(await avaliar(`!document.querySelector('.metric-refresh')&&document.activeElement===document.querySelector('.metric-info p')`),'Polling recupera falha e preserva foco ao retirar ação');
     // O relógio real do hook é acionado sem eventos de foco na primeira virada.
     modo='por-data';await abrir('virada');await valorExibido('R$ 119.00');
     verificar(await avaliar('window.__minutos.size===1'),'Strict Mode mantém um relógio financeiro ativo');

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { ItemPedidoDados } from '../interfaces/PedidoDados';
 import { ClipboardList, Minus, Plus, Loader2, ChefHat } from "lucide-react";
 import ComandaMesa from "./ComandaMesa"; // Importando o novo componente de histórico
@@ -33,6 +34,7 @@ interface PedidoMesaProps {
     motivoEstoque?: string | null;
     produtosAtuais?: ProdutoDados[];
     pagamentoPermitido?: boolean;
+    acaoAtualizacao?: ReactNode;
 }
 
 export default function PedidoMesa({
@@ -53,7 +55,8 @@ export default function PedidoMesa({
                                        possuiItensConsumidos,
                                        todosItensProntos,
                                        onAbrirPagamento,
-                                       motivoBloqueio = null, motivoEstoque = null, produtosAtuais, pagamentoPermitido = true
+                                       motivoBloqueio = null, motivoEstoque = null, produtosAtuais, pagamentoPermitido = true,
+                                       acaoAtualizacao
                                    }: PedidoMesaProps) {
 
     // Total dos itens que estão apenas no carrinho atual
@@ -89,6 +92,7 @@ export default function PedidoMesa({
                     {onVerificarAbertura && <button className="btn btn-primary" disabled={criando} onClick={onVerificarAbertura}>
                         {criando ? "Aguarde..." : "Verificar pedido"}
                     </button>}
+                    {acaoAtualizacao && <div className="pedido-atualizacao">{acaoAtualizacao}</div>}
                 </div>
             )}
 
